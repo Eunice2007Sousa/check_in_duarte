@@ -445,12 +445,12 @@ function OwnerTurmas({ ownerPin }) {
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
         <div className="font-display text-xl tracking-wide text-zinc-200">Criar turma semanal</div>
         <div className="text-xs text-zinc-500">Cada turma dura 1 hora e tem 5 vagas por defeito.</div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <select value={dia} onChange={(e) => setDia(e.target.value)} className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full">
+        <div className="flex flex-col sm:flex-row gap-3 min-w-0">
+          <select value={dia} onChange={(e) => setDia(e.target.value)} className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full min-w-0">
             {DIAS.map((d, i) => <option key={i} value={i}>{d}</option>)}
           </select>
-          <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-36 font-mono-id" />
-          <button onClick={addTemplate} className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 whitespace-nowrap">
+          <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-36 min-w-0 font-mono-id" />
+          <button onClick={addTemplate} className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 whitespace-nowrap shrink-0">
             <Plus size={16} /> Criar turma
           </button>
         </div>
@@ -536,13 +536,13 @@ function OwnerAtletas({ ownerPin }) {
         <div className="text-xs text-zinc-500">
           O ID é atribuído automaticamente{proximoId ? ` (o próximo será #${proximoId})` : ""}. Define também um código de {CODE_LEN} dígitos que só o atleta deve saber.
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome do atleta" className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full" />
-          <input value={newCode} onChange={(e) => setNewCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LEN))} placeholder="Código (ex: 4821)" className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-40 font-mono-id" />
-          <select value={newPack} onChange={(e) => setNewPack(Number(e.target.value))} className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-40">
+        <div className="flex flex-col sm:flex-row gap-3 min-w-0">
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome do atleta" className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full min-w-0" />
+          <input value={newCode} onChange={(e) => setNewCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LEN))} placeholder="Código (ex: 4821)" className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-40 min-w-0 font-mono-id" />
+          <select value={newPack} onChange={(e) => setNewPack(Number(e.target.value))} className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-40 min-w-0">
             {PACK_OPTIONS.map((p) => <option key={p} value={p}>{p} treinos</option>)}
           </select>
-          <button onClick={addAtleta} className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 whitespace-nowrap">
+          <button onClick={addAtleta} className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 whitespace-nowrap shrink-0">
             <Plus size={16} /> Adicionar
           </button>
         </div>
@@ -1036,7 +1036,7 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
                     <div key={t.id} className={`bg-zinc-900 border rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap ${cheio ? "border-rose-500/40" : "border-zinc-800"}`}>
                       <div className="flex items-center gap-3">
                         <span className="font-mono-id text-lime-400 text-lg">{hhmm(t.hora)}</span>
-                        {jaPassou && !minhaMarcacao ? (
+                        {jaPassou ? (
                           <span className="text-xs font-medium px-2 py-1 rounded-md bg-amber-500/15 text-amber-400">Já passou</span>
                         ) : (
                           <span className={`text-xs font-medium px-2 py-1 rounded-md ${cheio ? "bg-rose-500/15 text-rose-400" : "bg-emerald-500/15 text-emerald-400"}`}>
@@ -1045,10 +1045,14 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
                         )}
                       </div>
                       {minhaMarcacao ? (
-                        <div className="flex items-center gap-3">
-                          <span className="text-emerald-400 text-sm flex items-center gap-1"><CheckCircle2 size={16} /> Marcada</span>
-                          <button disabled={busy} onClick={() => cancel(minhaMarcacao.booking_id)} className="text-xs text-zinc-500 hover:text-rose-400 underline disabled:opacity-40">Cancelar</button>
-                        </div>
+                        jaPassou ? (
+                          <span className="text-sky-400 text-sm flex items-center gap-1"><CheckCircle2 size={16} /> Aula concluída</span>
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <span className="text-emerald-400 text-sm flex items-center gap-1"><CheckCircle2 size={16} /> Marcada</span>
+                            <button disabled={busy} onClick={() => cancel(minhaMarcacao.booking_id)} className="text-xs text-zinc-500 hover:text-rose-400 underline disabled:opacity-40">Cancelar</button>
+                          </div>
+                        )
                       ) : jaPassou ? (
                         <span className="px-4 py-2 rounded-md text-sm font-medium bg-zinc-800 text-zinc-600">Já passou</span>
                       ) : (
