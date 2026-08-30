@@ -920,11 +920,16 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
   const cancel = async (bookingId) => {
     if (busy) return;
     setBusy(true);
-    const { error } = await supabase.rpc("fn_desmarcar_aula", {
+    const { data, error } = await supabase.rpc("fn_desmarcar_aula", {
       p_numero_id: session.numero_id, p_codigo: session.codigo, p_booking_id: bookingId,
     });
     setBusy(false);
     if (error) { notify("error", friendlyError(error)); return; }
+    const resultado = data && data[0];
+    if (resultado && resultado.sucesso === false) {
+      notify("error", ERROR_MESSAGES[resultado.motivo] || resultado.motivo);
+      return;
+    }
     notify("success", "Marcação cancelada.");
     carregarTudo();
     carregarOcupacaoDoDia(date, turmas);
