@@ -843,7 +843,7 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
   const [minhasMarcacoes, setMinhasMarcacoes] = useState([]); // [{booking_id, turma_id, dia_semana, hora, data}]
   const [historico, setHistorico] = useState([]); // [{data, hora}]
   const [disponibilidadeMes, setDisponibilidadeMes] = useState([]); // fn_disponibilidade_periodo rows
-  const [ocupacaoHoje, setOcupacaoHoje] = useState({}); // {turmaId: {ocupadas, capacidade}}
+  const [ocupacaoHoje, setOcupacaoHoje] = useState({}); // {turmaId: disponivel:boolean} — nunca contagens reais
   const [loadingDia, setLoadingDia] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -882,12 +882,13 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
     if (templatesDoDia.length === 0) { setOcupacaoHoje({}); return; }
     setLoadingDia(true);
     const results = await Promise.all(
-      templatesDoDia.map((t) => supabase.rpc("fn_ocupacao_turma", { p_turma_id: t.id, p_data: dIso }))
+      templatesDoDia.map((t) => supabase.rpc("fn_disponibilidade_turma", { p_turma_id: t.id, p_data: dIso }))
     );
     const map = {};
     templatesDoDia.forEach((t, i) => {
-      const row = results[i].data && results[i].data[0];
-      map[t.id] = row ? row : { ocupadas: 0, capacidade: t.capacidade };
+      // fn_disponibilidade_turma devolve só um booleano — nunca a contagem
+      // real de vagas, para o atleta não ter acesso a esse número.
+      map[t.id] = results[i].data === true;
     });
     setOcupacaoHoje(map);
     setLoadingDia(false);
@@ -1019,7 +1020,7 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
               }
               const rows = disponibilidadeMes.filter((r) => r.data === dIso);
               if (rows.length === 0) return null;
-              const algumaComVaga = rows.some((r) => r.ocupadas < r.capacidade);
+              const algumaComVaga = rows.some((r) => r.disponivel);
               return <span className={`w-1.5 h-1.5 rounded-full ${algumaComVaga ? "bg-emerald-400" : "bg-rose-500"}`} />;
             }}
           />
@@ -1049,8 +1050,8 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
                 )}
                 {loadingDia && <div className="text-zinc-600 text-sm">A carregar vagas…</div>}
                 {!loadingDia && templatesHoje.map((t) => {
-                  const occ = ocupacaoHoje[t.id] || { ocupadas: 0, capacidade: t.capacidade };
-                  const cheio = occ.ocupadas >= occ.capacidade;
+                  const disponivel = ocupacaoHoje[t.id] !== false; // por defeito otimista até a resposta chegar
+                  const cheio = !disponivel;
                   const minhaMarcacao = minhasMarcacoes.find((b) => b.turma_id === t.id && b.data === iso);
                   const jaPassou = isSameDayAsToday && classDateTime(iso, t.hora) <= lisbonNow();
                   return (
@@ -1061,7 +1062,7 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
                           <span className="text-xs font-medium px-2 py-1 rounded-md bg-amber-500/15 text-amber-400">Já passou</span>
                         ) : (
                           <span className={`text-xs font-medium px-2 py-1 rounded-md ${cheio ? "bg-rose-500/15 text-rose-400" : "bg-emerald-500/15 text-emerald-400"}`}>
-                            {occ.ocupadas}/{occ.capacidade} vagas ocupadas
+                            {cheio ? "Turma completa" : "Vaga disponível"}
                           </span>
                         )}
                       </div>
