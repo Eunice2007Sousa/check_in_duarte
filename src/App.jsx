@@ -935,6 +935,17 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
     carregarOcupacaoDoDia(date, turmas);
   };
 
+  const dismiss = async (bookingId) => {
+    if (busy) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("fn_dispensar_marcacao", {
+      p_numero_id: session.numero_id, p_codigo: session.codigo, p_booking_id: bookingId,
+    });
+    setBusy(false);
+    if (error) { notify("error", friendlyError(error)); return; }
+    carregarTudo();
+  };
+
   const templatesHoje = turmas.filter((t) => t.dia_semana === date.getDay()).sort((a, b) => a.hora.localeCompare(b.hora));
   const restantes = session.pack_total - session.pack_usado;
   const pct = Math.max(0, Math.min(100, (restantes / session.pack_total) * 100));
@@ -967,12 +978,22 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
         <div className="font-display text-xl tracking-wide text-zinc-200 mb-3">As minhas aulas marcadas</div>
         <div className="divide-y divide-zinc-800 border border-zinc-800 rounded-xl overflow-hidden">
           {minhasMarcacoes.length === 0 && <div className="p-4 text-zinc-500 text-sm">Ainda não tens aulas marcadas.</div>}
-          {minhasMarcacoes.map((b) => (
-            <div key={b.booking_id} className="flex items-center justify-between px-4 py-3 bg-zinc-900 text-sm">
-              <span className="text-zinc-300">{b.data} — {DIAS[b.dia_semana]} às <span className="font-mono-id text-lime-400">{hhmm(b.hora)}</span></span>
-              <button onClick={() => cancel(b.booking_id)} className="text-zinc-600 hover:text-rose-400"><Trash2 size={16} /></button>
-            </div>
-          ))}
+          {minhasMarcacoes.map((b) => {
+            const concluida = classDateTime(b.data, b.hora) <= lisbonNow();
+            return (
+              <div key={b.booking_id} className="flex items-center justify-between gap-3 px-4 py-3 bg-zinc-900 text-sm flex-wrap">
+                <span className="text-zinc-300">{b.data} — {DIAS[b.dia_semana]} às <span className="font-mono-id text-lime-400">{hhmm(b.hora)}</span></span>
+                {concluida ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium px-2 py-1 rounded-md bg-sky-500/15 text-sky-400">Aula concluída</span>
+                    <button disabled={busy} onClick={() => dismiss(b.booking_id)} className="text-xs text-zinc-500 hover:text-lime-400 underline disabled:opacity-40">Descartar</button>
+                  </div>
+                ) : (
+                  <button onClick={() => cancel(b.booking_id)} className="text-zinc-600 hover:text-rose-400"><Trash2 size={16} /></button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -980,7 +1001,7 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
       <div>
         <div className="font-display text-xl tracking-wide text-zinc-200 mb-1">Marcar aula</div>
         <div className="text-xs text-zinc-500 mb-3">
-          Podes marcar ou desmarcar entre hoje e {maxBookingDate.getDate()} de {MESES[maxBookingDate.getMonth()]}. Só pode desmarcar aulas até 12h antes.
+          Podes marcar ou desmarcar entre hoje e {maxBookingDate.getDate()} de {MESES[maxBookingDate.getMonth()]}. Dias anteriores só podem ser consultados.
         </div>
         <div className="grid md:grid-cols-[minmax(0,380px)_1fr] gap-5 items-start">
           <MonthCalendar
