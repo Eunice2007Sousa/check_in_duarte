@@ -1002,7 +1002,7 @@ function AtletaDashboard({ session, onSessionUpdate, onSwitch }) {
       <div>
         <div className="font-display text-xl tracking-wide text-zinc-200 mb-1">Marcar aula</div>
         <div className="text-xs text-zinc-500 mb-3">
-          Podes marcar ou desmarcar entre hoje e {maxBookingDate.getDate()} de {MESES[maxBookingDate.getMonth()]}. Dias anteriores só podem ser consultados.
+          Pode marcar ou desmarcar entre hoje e {maxBookingDate.getDate()} de {MESES[maxBookingDate.getMonth()]}. Pode desmarcar aulas até 12h antes.
         </div>
         <div className="grid md:grid-cols-[minmax(0,380px)_1fr] gap-5 items-start">
           <MonthCalendar
