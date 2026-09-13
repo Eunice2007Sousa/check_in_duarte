@@ -2379,19 +2379,18 @@ function ChangeAthleteCode({
     try {
 
       const {
-        error
-      } = await supabase.rpc(
-        "fn_alterar_codigo_atleta_proprio",
-        {
-          p_numero_id:
-            session.numero_id,
-          p_codigo_atual:
-            currentCode,
-          p_novo_codigo:
-            newCode
-        }
-      );
-
+  error
+} = await supabase.rpc(
+  "fn_atleta_alterar_codigo",
+  {
+    p_numero_id:
+      session.numero_id,
+    p_codigo_atual:
+      currentCode,
+    p_novo_codigo:
+      newCode
+  }
+);
       if (error) {
         throw error;
       }
