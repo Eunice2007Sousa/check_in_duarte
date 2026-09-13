@@ -1791,21 +1791,21 @@ function AtletaArea() {
     }
 
     /*
-      PRIMEIRA VEZ:
-      o atleta ainda não tem código.
-    */
+  PRIMEIRA VEZ:
+  o atleta ainda não tem código.
+*/
 
-    if (!candidate.codigo_definido) {
-      return (
-        <AtletaFirstCode
-          candidate={candidate}
-          onSuccess={setSession}
-          onBack={() =>
-            setCandidate(null)
-          }
-        />
-      );
-    }
+if (!candidate.tem_codigo) {
+  return (
+    <AtletaFirstCode
+      candidate={candidate}
+      onSuccess={setSession}
+      onBack={() =>
+        setCandidate(null)
+      }
+    />
+  );
+}
 
     /*
       JÁ TEM CÓDIGO:
