@@ -1,27 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, supabaseConfigured } from "./supabaseClient";
 import {
-  Dumbbell,
-  Plus,
-  Trash2,
-  Users,
-  CalendarDays,
-  LayoutGrid,
-  ChevronLeft,
-  ChevronRight,
-  ArrowLeft,
-  KeyRound,
-  CheckCircle2,
-  XCircle,
-  Ban,
-  PackageCheck,
-  Lock,
-  Eye,
-  EyeOff,
-  Settings,
-  Star,
-  ClipboardList,
-  AlertTriangle,
+  Dumbbell, Plus, Trash2, Users, CalendarDays, LayoutGrid, ChevronLeft, ChevronRight,
+  ArrowLeft, KeyRound, CheckCircle2, XCircle, Ban, PackageCheck, Lock, Eye, EyeOff,
+  Settings, Star, ClipboardList, AlertTriangle
 } from "lucide-react";
 
 const DIAS = [
@@ -31,7 +13,7 @@ const DIAS = [
   "Quarta-feira",
   "Quinta-feira",
   "Sexta-feira",
-  "Sábado",
+  "Sábado"
 ];
 
 const DIAS_ABBR = ["D", "S", "T", "Q", "Q", "S", "S"];
@@ -48,15 +30,14 @@ const MESES = [
   "Setembro",
   "Outubro",
   "Novembro",
-  "Dezembro",
+  "Dezembro"
 ];
 
 const CODE_LEN = 4;
 const PACK_OPTIONS = [4, 8, 12];
-const CANCEL_HOURS = 12;
 
 /* ============================================================
-   DATE / TIME HELPERS
+   DATE / TIME
 ============================================================ */
 
 function pad2(n) {
@@ -64,9 +45,7 @@ function pad2(n) {
 }
 
 function isoDate(d) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(
-    d.getDate()
-  )}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
 function addMonths(d, n) {
@@ -89,14 +68,6 @@ function hhmm(hora) {
   return (hora || "").slice(0, 5);
 }
 
-/*
- * Devolve a hora atual de Lisboa.
- *
- * Importante:
- * Estamos a criar um Date com os valores de Lisboa como se fossem
- * valores locais. Isto permite comparar facilmente com as datas/horas
- * das aulas guardadas como "2026-09-13" + "18:00".
- */
 function lisbonNow() {
   const fmt = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Lisbon",
@@ -125,52 +96,11 @@ function lisbonNow() {
   );
 }
 
-/*
- * Converte uma data ISO + hora da aula para um Date "virtual"
- * usando os valores de Lisboa.
- */
 function classDateTime(dateIso, hora) {
-  if (!dateIso || !hora) return null;
-
   const [y, m, d] = dateIso.split("-").map(Number);
   const [hh, mm] = hora.split(":").map(Number);
 
-  return new Date(y, m - 1, d, hh, mm, 0);
-}
-
-function hoursUntilClass(dateIso, hora) {
-  const classTime = classDateTime(dateIso, hora);
-  if (!classTime) return -Infinity;
-
-  const now = lisbonNow();
-
-  return (classTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-}
-
-function canCancelClass(dateIso, hora) {
-  return hoursUntilClass(dateIso, hora) >= CANCEL_HOURS;
-}
-
-/*
- * Timestamp vindo do Postgres é um instante real.
- * Aqui formatamos esse instante explicitamente em Lisboa.
- */
-function formatTimestamp(ts) {
-  if (!ts) return "";
-
-  const d = new Date(ts);
-
-  return new Intl.DateTimeFormat("pt-PT", {
-    timeZone: "Europe/Lisbon",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-    .format(d)
-    .replace(",", " às");
+  return new Date(y, m - 1, d, hh, mm);
 }
 
 /* ============================================================
@@ -181,23 +111,22 @@ const ERROR_MESSAGES = {
   CREDENCIAIS_INVALIDAS: "ID ou PIN incorretos.",
   TURMA_INEXISTENTE: "Esta turma já não existe.",
   AULA_JA_PASSOU: "Esta aula já aconteceu — não é possível marcar.",
-  PACK_ESGOTADO:
-    "Não tens treinos disponíveis no teu pack. Fala com o Duarte.",
+  PACK_ESGOTADO: "Não tens treinos disponíveis no teu pack. Fala com o Duarte.",
   JA_INSCRITO: "Já estás inscrito nesta aula.",
   TURMA_CHEIA: "Esta aula já está com as vagas todas preenchidas.",
   MARCACAO_INEXISTENTE: "Não foi possível encontrar esta marcação.",
-  MENOS_DE_12H:
-    "Já não é possível desmarcar: faltam menos de 12h para a aula.",
+  MENOS_DE_1H: "Já não é possível desmarcar: falta menos de 1h para a aula.",
+  MENOS_DE_12H: "Já não é possível desmarcar: falta menos de 1h para a aula.",
   PIN_INVALIDO: "PIN incorreto.",
   CODIGO_INVALIDO: "O código deve ter 4 dígitos.",
   CODIGO_JA_USADO: "Esse código já está a ser usado por outro atleta.",
   PIN_FORMATO_INVALIDO: "O novo PIN deve ter 4 dígitos.",
+  CODIGOS_NAO_IGUAIS: "Os códigos não coincidem.",
+  CODIGO_JA_DEFINIDO: "Este atleta já tem um código definido.",
 };
 
 function friendlyError(error) {
-  if (!error) {
-    return "Ocorreu um erro inesperado.";
-  }
+  if (!error) return "Ocorreu um erro inesperado.";
 
   const msg = error.message || String(error);
 
@@ -228,6 +157,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 font-body">
+
       <style>{`
         .font-display {
           font-family: 'Bebas Neue', sans-serif;
@@ -245,21 +175,20 @@ export default function App() {
 
       {!supabaseConfigured && (
         <div className="bg-amber-500/15 text-amber-400 text-xs text-center py-2 px-4 border-b border-amber-500/30">
-          Faltam as variáveis VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY —
-          configura-as no .env ou na Vercel.
+          Faltam as variáveis VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
         </div>
       )}
 
       <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
         <div className="flex items-center gap-2 text-lime-400">
           <Dumbbell size={22} />
-
           <span className="font-display text-2xl tracking-wide">
             CHECK-IN
           </span>
         </div>
 
         <div className="flex gap-2">
+
           <button
             onClick={() => goToRole("dono")}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm border transition-colors ${
@@ -282,10 +211,12 @@ export default function App() {
           >
             Área do Atleta
           </button>
+
         </div>
       </header>
 
       {role === "dono" ? (
+
         ownerPin ? (
           <OwnerArea
             ownerPin={ownerPin}
@@ -298,7 +229,7 @@ export default function App() {
               const { data, error } = await supabase.rpc(
                 "fn_verificar_owner",
                 {
-                  p_pin: digits,
+                  p_pin: digits
                 }
               );
 
@@ -309,15 +240,17 @@ export default function App() {
             onSuccess={setOwnerPin}
           />
         )
+
       ) : (
         <AtletaArea />
       )}
+
     </div>
   );
 }
 
 /* ============================================================
-   PIN GATE
+   PIN KEYPAD
 ============================================================ */
 
 function PinGate({
@@ -325,7 +258,7 @@ function PinGate({
   label,
   title,
   onSuccess,
-  onBack,
+  onBack
 }) {
   const [digits, setDigits] = useState("");
   const [error, setError] = useState("");
@@ -333,83 +266,55 @@ function PinGate({
 
   const timer = useRef(null);
 
-  /*
-   * Guardamos as funções em refs para evitar que a alteração
-   * de estado provoque uma nova verificação automática.
-   */
-  const verifyRef = useRef(verify);
-  const onSuccessRef = useRef(onSuccess);
-
   useEffect(() => {
-    verifyRef.current = verify;
-  }, [verify]);
+    if (digits.length === CODE_LEN) {
 
-  useEffect(() => {
-    onSuccessRef.current = onSuccess;
-  }, [onSuccess]);
+      clearTimeout(timer.current);
 
-  useEffect(() => {
-    if (digits.length !== CODE_LEN) {
-      return;
+      timer.current = setTimeout(async () => {
+        setChecking(true);
+
+        try {
+          const payload = await verify(digits);
+
+          if (payload) {
+            onSuccess(payload);
+          } else {
+            setError("PIN incorreto.");
+            setDigits("");
+          }
+
+        } catch (e) {
+          setError(friendlyError(e));
+          setDigits("");
+
+        } finally {
+          setChecking(false);
+        }
+
+      }, 150);
     }
 
-    clearTimeout(timer.current);
-
-    timer.current = setTimeout(async () => {
-      setChecking(true);
-
-      try {
-        const payload = await verifyRef.current(digits);
-
-        if (payload) {
-          onSuccessRef.current(payload);
-        } else {
-          setError("PIN incorreto.");
-          setDigits("");
-        }
-      } catch (e) {
-        setError(friendlyError(e));
-        setDigits("");
-      } finally {
-        setChecking(false);
-      }
-    }, 150);
-
-    return () => {
-      clearTimeout(timer.current);
-    };
-  }, [digits]);
-
-  useEffect(() => {
-    return () => {
-      clearTimeout(timer.current);
-    };
-  }, []);
+    return () => clearTimeout(timer.current);
+  }, [digits, verify, onSuccess]);
 
   const press = (d) => {
-    if (checking) return;
-    if (digits.length >= CODE_LEN) return;
-
-    setError("");
-    setDigits((prev) => prev + d);
-  };
-
-  const clear = () => {
-    if (checking) return;
-
-    setDigits("");
-    setError("");
+    if (!checking && digits.length < CODE_LEN) {
+      setError("");
+      setDigits((p) => p + d);
+    }
   };
 
   return (
     <main className="flex flex-col items-center justify-center px-6 py-16 gap-6">
+
       {onBack && (
         <button
           onClick={onBack}
           className="self-start ml-2 -mb-2 flex items-center gap-1 text-xs text-zinc-500 hover:text-lime-400"
         >
           <ArrowLeft size={14} />
-          Trocar ID
+          Voltar
         </button>
       )}
 
@@ -446,13 +351,14 @@ function PinGate({
       )}
 
       {error && (
-        <div className="text-rose-400 text-sm text-center">
+        <div className="text-rose-400 text-sm">
           {error}
         </div>
       )}
 
       <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+
+        {[1,2,3,4,5,6,7,8,9].map((n) => (
           <button
             key={n}
             disabled={checking}
@@ -465,7 +371,10 @@ function PinGate({
 
         <button
           disabled={checking}
-          onClick={clear}
+          onClick={() => {
+            setDigits("");
+            setError("");
+          }}
           className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 disabled:opacity-40"
         >
           <Ban size={20} />
@@ -480,7 +389,9 @@ function PinGate({
         </button>
 
         <div />
+
       </div>
+
     </main>
   );
 }
@@ -494,25 +405,21 @@ function buildMonthCells(viewMonth) {
   const month = viewMonth.getMonth();
 
   const firstWeekday = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(
-    year,
-    month + 1,
-    0
-  ).getDate();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells = [];
 
   for (let i = firstWeekday - 1; i >= 0; i--) {
     cells.push({
       date: new Date(year, month, -i),
-      outside: true,
+      outside: true
     });
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
     cells.push({
       date: new Date(year, month, d),
-      outside: false,
+      outside: false
     });
   }
 
@@ -521,7 +428,7 @@ function buildMonthCells(viewMonth) {
   while (cells.length < 42) {
     cells.push({
       date: new Date(year, month + 1, next++),
-      outside: true,
+      outside: true
     });
   }
 
@@ -534,7 +441,7 @@ function MonthCalendar({
   renderMarker,
   minDate,
   maxDate,
-  onMonthChange,
+  onMonthChange
 }) {
   const [viewMonth, setViewMonth] = useState(
     new Date(selected.getFullYear(), selected.getMonth(), 1)
@@ -548,11 +455,9 @@ function MonthCalendar({
     if (onMonthChange) {
       onMonthChange(viewMonth);
     }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     viewMonth.getFullYear(),
-    viewMonth.getMonth(),
+    viewMonth.getMonth()
   ]);
 
   const inRange = (d) =>
@@ -582,13 +487,15 @@ function MonthCalendar({
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+
       <div className="flex items-center justify-between mb-4">
+
         <div className="font-display text-xl tracking-wide text-zinc-200">
-          {MESES[viewMonth.getMonth()]}{" "}
-          {viewMonth.getFullYear()}
+          {MESES[viewMonth.getMonth()]} {viewMonth.getFullYear()}
         </div>
 
         <div className="flex items-center gap-1">
+
           <button
             onClick={() =>
               canGoPrev &&
@@ -612,7 +519,7 @@ function MonthCalendar({
 
           <button
             onClick={goToday}
-            className="px-3 py-2 rounded-md border border-zinc-800 text-xs text-zinc-400 hover:text-lime-400 hover:border-lime-400/40"
+            className="px-3 py-2 rounded-md border border-zinc-800 text-xs text-zinc-400 hover:text-lime-400"
           >
             Hoje
           </button>
@@ -637,10 +544,12 @@ function MonthCalendar({
           >
             <ChevronRight size={16} />
           </button>
+
         </div>
       </div>
 
       <div className="grid grid-cols-7 gap-1 mb-1">
+
         {DIAS_ABBR.map((d, i) => (
           <div
             key={i}
@@ -649,10 +558,13 @@ function MonthCalendar({
             {d}
           </div>
         ))}
+
       </div>
 
       <div className="grid grid-cols-7 gap-1">
+
         {cells.map((c, i) => {
+
           const day = startOfDay(c.date);
 
           const isToday = sameDay(day, today);
@@ -691,20 +603,23 @@ function MonthCalendar({
               <span>{c.date.getDate()}</span>
 
               {!isSelected &&
-              !disabled &&
-              renderMarker
+                !disabled &&
+                renderMarker
                 ? renderMarker(c.date)
                 : null}
+
             </button>
           );
         })}
+
       </div>
+
     </div>
   );
 }
 
 /* ============================================================
-   ÁREA DO DUARTE
+   OWNER AREA
 ============================================================ */
 
 function OwnerArea({ ownerPin, onPinChanged }) {
@@ -712,7 +627,9 @@ function OwnerArea({ ownerPin, onPinChanged }) {
 
   return (
     <main className="px-6 py-8 max-w-4xl w-full mx-auto">
+
       <div className="flex gap-2 mb-6 flex-wrap">
+
         <TabButton
           icon={CalendarDays}
           label="Calendário"
@@ -747,6 +664,7 @@ function OwnerArea({ ownerPin, onPinChanged }) {
           active={tab === "auditoria"}
           onClick={() => setTab("auditoria")}
         />
+
       </div>
 
       {tab === "calendario" && (
@@ -771,6 +689,7 @@ function OwnerArea({ ownerPin, onPinChanged }) {
       {tab === "auditoria" && (
         <OwnerAuditLog ownerPin={ownerPin} />
       )}
+
     </main>
   );
 }
@@ -779,7 +698,7 @@ function TabButton({
   icon: Icon,
   label,
   active,
-  onClick,
+  onClick
 }) {
   return (
     <button
@@ -787,7 +706,7 @@ function TabButton({
       className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm border ${
         active
           ? "border-lime-400 text-lime-400"
-          : "border-zinc-800 text-zinc-500 hover:text-zinc-300"
+          : "border-zinc-800 text-zinc-500"
       }`}
     >
       <Icon size={16} />
@@ -807,40 +726,22 @@ function OwnerCalendar({ ownerPin }) {
 
   const [turmas, setTurmas] = useState([]);
   const [resumoMes, setResumoMes] = useState([]);
-  const [inscritosPorTurma, setInscritosPorTurma] =
-    useState({});
-
+  const [inscritosPorTurma, setInscritosPorTurma] = useState({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const iso = isoDate(date);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function carregar() {
-      const { data, error } =
-        await supabase.rpc("fn_listar_turmas");
-
-      if (cancelled) return;
-
-      if (error) {
-        setError(friendlyError(error));
-        return;
-      }
-
-      setTurmas(data || []);
-    }
-
-    carregar();
-
-    return () => {
-      cancelled = true;
-    };
+    supabase
+      .rpc("fn_listar_turmas")
+      .then(({ data }) => {
+        setTurmas(data || []);
+      });
   }, []);
 
   const handleMonthChange = useCallback(
     async (viewMonth) => {
+
       const desde = isoDate(
         new Date(
           viewMonth.getFullYear(),
@@ -857,17 +758,14 @@ function OwnerCalendar({ ownerPin }) {
         )
       );
 
-      const { data, error } =
-        await supabase.rpc("fn_resumo_periodo", {
+      const { data } = await supabase.rpc(
+        "fn_resumo_periodo",
+        {
           p_owner_pin: ownerPin,
           p_desde: desde,
-          p_ate: ate,
-        });
-
-      if (error) {
-        setError(friendlyError(error));
-        return;
-      }
+          p_ate: ate
+        }
+      );
 
       setResumoMes(data || []);
     },
@@ -878,68 +776,69 @@ function OwnerCalendar({ ownerPin }) {
     .filter(
       (t) => t.dia_semana === date.getDay()
     )
-    .sort((a, b) =>
-      a.hora.localeCompare(b.hora)
+    .sort(
+      (a, b) =>
+        a.hora.localeCompare(b.hora)
     );
 
   useEffect(() => {
+
     let cancelled = false;
 
-    async function carregarInscritos() {
-      if (templatesHoje.length === 0) {
-        setInscritosPorTurma({});
-        setLoading(false);
-        return;
-      }
+    if (templatesHoje.length === 0) {
+      setInscritosPorTurma({});
+      return;
+    }
+
+    (async () => {
 
       setLoading(true);
-      setError("");
 
       const results = await Promise.all(
         templatesHoje.map((t) =>
-          supabase.rpc("fn_ver_inscritos", {
-            p_owner_pin: ownerPin,
-            p_turma_id: t.id,
-            p_data: iso,
-          })
+          supabase.rpc(
+            "fn_ver_inscritos",
+            {
+              p_owner_pin: ownerPin,
+              p_turma_id: t.id,
+              p_data: iso
+            }
+          )
         )
       );
 
       if (cancelled) return;
 
-      const firstError = results.find(
-        (r) => r.error
-      );
-
-      if (firstError?.error) {
-        setError(friendlyError(firstError.error));
-        setLoading(false);
-        return;
-      }
-
       const map = {};
 
       templatesHoje.forEach((t, i) => {
-        map[t.id] = results[i].data || [];
+        map[t.id] =
+          results[i].data || [];
       });
 
       setInscritosPorTurma(map);
       setLoading(false);
-    }
 
-    carregarInscritos();
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [iso, turmas, ownerPin]);
+
+  }, [
+    iso,
+    turmas.length,
+    ownerPin
+  ]);
 
   const marker = (d) => {
+
     const dIso = isoDate(d);
 
-    const rows = resumoMes.filter(
-      (r) => r.data === dIso
-    );
+    const rows =
+      resumoMes.filter(
+        (r) => r.data === dIso
+      );
 
     if (rows.length === 0) {
       return null;
@@ -962,6 +861,7 @@ function OwnerCalendar({ ownerPin }) {
 
   return (
     <div className="grid md:grid-cols-[minmax(0,380px)_1fr] gap-5 items-start">
+
       <MonthCalendar
         selected={date}
         onSelect={setDate}
@@ -970,17 +870,11 @@ function OwnerCalendar({ ownerPin }) {
       />
 
       <div className="space-y-3">
+
         <div className="text-sm text-zinc-500">
-          {DIAS[date.getDay()]},{" "}
-          {date.getDate()} de{" "}
+          {DIAS[date.getDay()]}, {date.getDate()} de{" "}
           {MESES[date.getMonth()]}
         </div>
-
-        {error && (
-          <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-sm text-rose-400">
-            {error}
-          </div>
-        )}
 
         {templatesHoje.length === 0 && (
           <div className="text-zinc-500 text-sm bg-zinc-900 border border-zinc-800 rounded-xl p-4">
@@ -990,6 +884,7 @@ function OwnerCalendar({ ownerPin }) {
         )}
 
         {templatesHoje.map((t) => {
+
           const inscritos =
             inscritosPorTurma[t.id] || [];
 
@@ -1001,7 +896,9 @@ function OwnerCalendar({ ownerPin }) {
               key={t.id}
               className="bg-zinc-900 border border-zinc-800 rounded-xl p-4"
             >
+
               <div className="flex items-center justify-between mb-2">
+
                 <span className="font-mono-id text-lime-400 text-lg">
                   {hhmm(t.hora)}
                 </span>
@@ -1016,6 +913,7 @@ function OwnerCalendar({ ownerPin }) {
                   {inscritos.length}/
                   {t.capacidade} vagas ocupadas
                 </span>
+
               </div>
 
               {loading ? (
@@ -1035,9 +933,11 @@ function OwnerCalendar({ ownerPin }) {
                   ))}
                 </ul>
               )}
+
             </div>
           );
         })}
+
       </div>
     </div>
   );
@@ -1048,22 +948,20 @@ function OwnerCalendar({ ownerPin }) {
 ============================================================ */
 
 function OwnerTurmas({ ownerPin }) {
+
   const [turmas, setTurmas] = useState([]);
   const [dia, setDia] = useState(1);
   const [hora, setHora] = useState("18:00");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const carregar = useCallback(async () => {
-    const { data, error } =
-      await supabase.rpc("fn_listar_turmas");
+  const carregar = useCallback(() => {
 
-    if (error) {
-      setError(friendlyError(error));
-      return;
-    }
+    supabase
+      .rpc("fn_listar_turmas")
+      .then(({ data }) => {
+        setTurmas(data || []);
+      });
 
-    setTurmas(data || []);
   }, []);
 
   useEffect(() => {
@@ -1071,53 +969,53 @@ function OwnerTurmas({ ownerPin }) {
   }, [carregar]);
 
   const addTemplate = async () => {
+
     setError("");
-    setLoading(true);
 
-    const { error } = await supabase.rpc(
-      "fn_criar_turma",
-      {
-        p_owner_pin: ownerPin,
-        p_dia_semana: Number(dia),
-        p_hora: hora,
-      }
-    );
-
-    setLoading(false);
+    const { error } =
+      await supabase.rpc(
+        "fn_criar_turma",
+        {
+          p_owner_pin: ownerPin,
+          p_dia_semana: Number(dia),
+          p_hora: hora
+        }
+      );
 
     if (error) {
-      setError(friendlyError(error));
-      return;
+      return setError(
+        friendlyError(error)
+      );
     }
 
-    await carregar();
+    carregar();
   };
 
   const removeTemplate = async (id) => {
-    setError("");
-    setLoading(true);
 
-    const { error } = await supabase.rpc(
-      "fn_remover_turma",
-      {
-        p_owner_pin: ownerPin,
-        p_turma_id: id,
-      }
-    );
-
-    setLoading(false);
+    const { error } =
+      await supabase.rpc(
+        "fn_remover_turma",
+        {
+          p_owner_pin: ownerPin,
+          p_turma_id: id
+        }
+      );
 
     if (error) {
-      setError(friendlyError(error));
-      return;
+      return setError(
+        friendlyError(error)
+      );
     }
 
-    await carregar();
+    carregar();
   };
 
   return (
     <div className="space-y-6">
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+
         <div className="font-display text-xl tracking-wide text-zinc-200">
           Criar turma semanal
         </div>
@@ -1126,16 +1024,20 @@ function OwnerTurmas({ ownerPin }) {
           Cada turma dura 1 hora e tem 5 vagas por defeito.
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 min-w-0">
+        <div className="flex flex-col sm:flex-row gap-3">
+
           <select
             value={dia}
             onChange={(e) =>
               setDia(e.target.value)
             }
-            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full min-w-0"
+            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full"
           >
             {DIAS.map((d, i) => (
-              <option key={i} value={i}>
+              <option
+                key={i}
+                value={i}
+              >
                 {d}
               </option>
             ))}
@@ -1147,17 +1049,17 @@ function OwnerTurmas({ ownerPin }) {
             onChange={(e) =>
               setHora(e.target.value)
             }
-            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-36 min-w-0 font-mono-id"
+            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-36 font-mono-id"
           />
 
           <button
-            disabled={loading}
             onClick={addTemplate}
-            className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 disabled:opacity-50 whitespace-nowrap shrink-0"
+            className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 whitespace-nowrap"
           >
             <Plus size={16} />
             Criar turma
           </button>
+
         </div>
 
         {error && (
@@ -1165,9 +1067,11 @@ function OwnerTurmas({ ownerPin }) {
             {error}
           </div>
         )}
+
       </div>
 
       <div className="divide-y divide-zinc-800 border border-zinc-800 rounded-xl overflow-hidden">
+
         {turmas.length === 0 && (
           <div className="p-4 text-zinc-500 text-sm">
             Ainda não há turmas criadas.
@@ -1181,11 +1085,14 @@ function OwnerTurmas({ ownerPin }) {
               a.hora.localeCompare(b.hora)
           )
           .map((t) => (
+
             <div
               key={t.id}
               className="flex items-center justify-between px-4 py-3 bg-zinc-900"
             >
+
               <div className="flex items-center gap-3 text-sm">
+
                 <span className="text-zinc-500 w-28">
                   {DIAS[t.dia_semana]}
                 </span>
@@ -1197,20 +1104,24 @@ function OwnerTurmas({ ownerPin }) {
                 <span className="text-zinc-500 text-xs">
                   {t.capacidade} vagas
                 </span>
+
               </div>
 
               <button
-                disabled={loading}
                 onClick={() =>
                   removeTemplate(t.id)
                 }
-                className="text-zinc-600 hover:text-rose-400 disabled:opacity-40"
+                className="text-zinc-600 hover:text-rose-400"
               >
                 <Trash2 size={18} />
               </button>
+
             </div>
+
           ))}
+
       </div>
+
     </div>
   );
 }
@@ -1220,177 +1131,129 @@ function OwnerTurmas({ ownerPin }) {
 ============================================================ */
 
 function OwnerAtletas({ ownerPin }) {
+
   const [atletas, setAtletas] = useState([]);
   const [proximoId, setProximoId] = useState(null);
 
   const [newName, setNewName] = useState("");
-  const [newCode, setNewCode] = useState("");
-  const [newPack, setNewPack] = useState(
-    PACK_OPTIONS[0]
-  );
+  const [newPack, setNewPack] =
+    useState(PACK_OPTIONS[0]);
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [assigning, setAssigning] = useState(null);
-  const [revealed, setRevealed] = useState({});
-  const [editingCode, setEditingCode] = useState(null);
-  const [editCodeValue, setEditCodeValue] =
-    useState("");
+  const [assigning, setAssigning] =
+    useState(null);
 
-  const carregar = useCallback(async () => {
-    const [
-      { data: lista, error: listaError },
-      { data: prox, error: proxError },
-    ] = await Promise.all([
-      supabase.rpc("fn_listar_atletas", {
-        p_owner_pin: ownerPin,
-      }),
+  const [revealed, setRevealed] =
+    useState({});
 
-      supabase.rpc("fn_proximo_numero_id"),
-    ]);
+  const carregar = useCallback(
+    async () => {
 
-    if (listaError) {
-      setError(friendlyError(listaError));
-      return;
-    }
+      const [
+        { data: lista },
+        { data: prox }
+      ] = await Promise.all([
+        supabase.rpc(
+          "fn_listar_atletas",
+          {
+            p_owner_pin: ownerPin
+          }
+        ),
+        supabase.rpc(
+          "fn_proximo_numero_id"
+        )
+      ]);
 
-    if (proxError) {
-      setError(friendlyError(proxError));
-      return;
-    }
-
-    setAtletas(lista || []);
-    setProximoId(prox ?? null);
-  }, [ownerPin]);
+      setAtletas(lista || []);
+      setProximoId(prox ?? null);
+    },
+    [ownerPin]
+  );
 
   useEffect(() => {
     carregar();
   }, [carregar]);
 
   const addAtleta = async () => {
+
     setError("");
 
-    if (!/^\d{4}$/.test(newCode)) {
-      setError(
-        `O código deve ter exatamente ${CODE_LEN} dígitos.`
-      );
-      return;
-    }
-
     if (!newName.trim()) {
-      setError("Indica o nome do atleta.");
-      return;
+      return setError(
+        "Indica o nome do atleta."
+      );
     }
 
-    setLoading(true);
-
-    const { error } = await supabase.rpc(
-      "fn_criar_atleta",
-      {
-        p_owner_pin: ownerPin,
-        p_nome: newName.trim(),
-        p_codigo: newCode,
-        p_pack_total: newPack,
-      }
-    );
-
-    setLoading(false);
+    const { error } =
+      await supabase.rpc(
+        "fn_criar_atleta",
+        {
+          p_owner_pin: ownerPin,
+          p_nome: newName.trim(),
+          p_pack_total: newPack
+        }
+      );
 
     if (error) {
-      setError(friendlyError(error));
-      return;
+      return setError(
+        friendlyError(error)
+      );
     }
 
     setNewName("");
-    setNewCode("");
-
-    await carregar();
+    carregar();
   };
 
   const removeAtleta = async (id) => {
-    setError("");
-    setLoading(true);
 
-    const { error } = await supabase.rpc(
-      "fn_remover_atleta",
-      {
-        p_owner_pin: ownerPin,
-        p_atleta_id: id,
-      }
-    );
-
-    setLoading(false);
+    const { error } =
+      await supabase.rpc(
+        "fn_remover_atleta",
+        {
+          p_owner_pin: ownerPin,
+          p_atleta_id: id
+        }
+      );
 
     if (error) {
-      setError(friendlyError(error));
-      return;
+      return setError(
+        friendlyError(error)
+      );
     }
 
-    await carregar();
+    carregar();
   };
 
-  const assignPack = async (id, total) => {
-    setError("");
-    setLoading(true);
+  const assignPack = async (
+    id,
+    total
+  ) => {
 
-    const { error } = await supabase.rpc(
-      "fn_atribuir_pack",
-      {
-        p_owner_pin: ownerPin,
-        p_atleta_id: id,
-        p_pack_total: total,
-      }
-    );
-
-    setLoading(false);
+    const { error } =
+      await supabase.rpc(
+        "fn_atribuir_pack",
+        {
+          p_owner_pin: ownerPin,
+          p_atleta_id: id,
+          p_pack_total: total
+        }
+      );
 
     if (error) {
-      setError(friendlyError(error));
-      return;
+      return setError(
+        friendlyError(error)
+      );
     }
 
     setAssigning(null);
-
-    await carregar();
-  };
-
-  const saveCode = async (id) => {
-    setError("");
-
-    if (!/^\d{4}$/.test(editCodeValue)) {
-      setError(
-        `O código deve ter exatamente ${CODE_LEN} dígitos.`
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    const { error } = await supabase.rpc(
-      "fn_alterar_codigo_atleta",
-      {
-        p_owner_pin: ownerPin,
-        p_atleta_id: id,
-        p_novo_codigo: editCodeValue,
-      }
-    );
-
-    setLoading(false);
-
-    if (error) {
-      setError(friendlyError(error));
-      return;
-    }
-
-    setEditingCode(null);
-    setEditCodeValue("");
-
-    await carregar();
+    carregar();
   };
 
   return (
     <div className="space-y-6">
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+
         <div className="font-display text-xl tracking-wide text-zinc-200">
           Adicionar atleta
         </div>
@@ -1399,41 +1262,30 @@ function OwnerAtletas({ ownerPin }) {
           O ID é atribuído automaticamente
           {proximoId
             ? ` (o próximo será #${proximoId})`
-            : ""}
-          . Define também um código de {CODE_LEN} dígitos
-          que só o atleta deve saber.
+            : ""}.
+          O atleta irá escolher o seu próprio código
+          de 4 dígitos na primeira utilização.
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 min-w-0">
+        <div className="flex flex-col sm:flex-row gap-3">
+
           <input
             value={newName}
             onChange={(e) =>
               setNewName(e.target.value)
             }
             placeholder="Nome do atleta"
-            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full min-w-0"
-          />
-
-          <input
-            value={newCode}
-            onChange={(e) =>
-              setNewCode(
-                e.target.value
-                  .replace(/\D/g, "")
-                  .slice(0, CODE_LEN)
-              )
-            }
-            placeholder="Código (ex: 4821)"
-            inputMode="numeric"
-            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-40 min-w-0 font-mono-id"
+            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full"
           />
 
           <select
             value={newPack}
             onChange={(e) =>
-              setNewPack(Number(e.target.value))
+              setNewPack(
+                Number(e.target.value)
+              )
             }
-            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-40 min-w-0"
+            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-40"
           >
             {PACK_OPTIONS.map((p) => (
               <option key={p} value={p}>
@@ -1443,13 +1295,13 @@ function OwnerAtletas({ ownerPin }) {
           </select>
 
           <button
-            disabled={loading}
             onClick={addAtleta}
-            className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 disabled:opacity-50 whitespace-nowrap shrink-0"
+            className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 whitespace-nowrap"
           >
             <Plus size={16} />
             Adicionar
           </button>
+
         </div>
 
         {error && (
@@ -1457,38 +1309,37 @@ function OwnerAtletas({ ownerPin }) {
             {error}
           </div>
         )}
+
       </div>
 
       <div className="divide-y divide-zinc-800 border border-zinc-800 rounded-xl overflow-hidden">
-        {atletas.length === 0 && (
-          <div className="p-4 text-zinc-500 text-sm">
-            Ainda não há atletas.
-          </div>
-        )}
 
         {atletas.map((a) => {
+
           const restantes =
             a.pack_total - a.pack_usado;
 
           const pct =
-            a.pack_total > 0
-              ? Math.max(
-                  0,
-                  Math.min(
-                    100,
-                    (restantes / a.pack_total) *
-                      100
-                  )
-                )
-              : 0;
+            Math.max(
+              0,
+              Math.min(
+                100,
+                (restantes /
+                  a.pack_total) *
+                  100
+              )
+            );
 
           return (
             <div
               key={a.id}
               className="px-4 py-3 bg-zinc-900 flex items-center justify-between gap-4 flex-wrap"
             >
+
               <div>
+
                 <div className="flex items-center gap-2">
+
                   <span className="text-zinc-200">
                     {a.nome}
                   </span>
@@ -1496,14 +1347,16 @@ function OwnerAtletas({ ownerPin }) {
                   <span className="font-mono-id text-zinc-500 text-xs">
                     #{a.numero_id}
                   </span>
+
                 </div>
 
                 <div className="text-xs text-zinc-500">
-                  {restantes} de {a.pack_total} treinos
-                  restantes
+                  {restantes} de{" "}
+                  {a.pack_total} treinos restantes
                 </div>
 
                 <div className="w-32 h-1.5 bg-zinc-800 rounded-full mt-1 overflow-hidden">
+
                   <div
                     className={`h-full ${
                       restantes === 0
@@ -1511,102 +1364,58 @@ function OwnerAtletas({ ownerPin }) {
                         : "bg-lime-400"
                     }`}
                     style={{
-                      width: `${pct}%`,
+                      width: `${pct}%`
                     }}
                   />
+
                 </div>
 
                 <div className="flex items-center gap-2 mt-2">
-                  {editingCode === a.id ? (
-                    <>
-                      <input
-                        autoFocus
-                        value={editCodeValue}
-                        onChange={(e) =>
-                          setEditCodeValue(
-                            e.target.value
-                              .replace(/\D/g, "")
-                              .slice(
-                                0,
-                                CODE_LEN
-                              )
-                          )
-                        }
-                        inputMode="numeric"
-                        className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1 text-xs w-20 font-mono-id"
-                      />
 
-                      <button
-                        disabled={loading}
-                        onClick={() =>
-                          saveCode(a.id)
-                        }
-                        className="text-xs text-lime-400 disabled:opacity-40"
-                      >
-                        Guardar
-                      </button>
+                  <span className="font-mono-id text-xs text-zinc-400 tracking-widest">
+                    {a.codigo
+                      ? revealed[a.id]
+                        ? a.codigo
+                        : "••••"
+                      : "Ainda não definido"}
+                  </span>
 
-                      <button
-                        onClick={() => {
-                          setEditingCode(null);
-                          setEditCodeValue("");
-                        }}
-                        className="text-xs text-zinc-500"
-                      >
-                        cancelar
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="font-mono-id text-xs text-zinc-400 tracking-widest">
-                        {revealed[a.id]
-                          ? a.codigo
-                          : "••••"}
-                      </span>
-
-                      <button
-                        onClick={() =>
-                          setRevealed((r) => ({
-                            ...r,
-                            [a.id]: !r[a.id],
-                          }))
-                        }
-                        className="text-zinc-600 hover:text-lime-400"
-                      >
-                        {revealed[a.id] ? (
-                          <EyeOff size={14} />
-                        ) : (
-                          <Eye size={14} />
-                        )}
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setEditingCode(a.id);
-                          setEditCodeValue(
-                            a.codigo
-                          );
-                        }}
-                        className="text-xs text-zinc-500 hover:text-lime-400 underline"
-                      >
-                        alterar código
-                      </button>
-                    </>
+                  {a.codigo && (
+                    <button
+                      onClick={() =>
+                        setRevealed((r) => ({
+                          ...r,
+                          [a.id]:
+                            !r[a.id]
+                        }))
+                      }
+                      className="text-zinc-600 hover:text-lime-400"
+                    >
+                      {revealed[a.id] ? (
+                        <EyeOff size={14} />
+                      ) : (
+                        <Eye size={14} />
+                      )}
+                    </button>
                   )}
+
                 </div>
+
               </div>
 
               <div className="flex items-center gap-2">
+
                 {assigning === a.id ? (
+
                   <div className="flex items-center gap-2">
+
                     {PACK_OPTIONS.map((p) => (
                       <button
                         key={p}
-                        disabled={loading}
                         onClick={() =>
                           assignPack(a.id, p)
                         }
-                        className="px-3 py-1.5 rounded-md border border-lime-400 text-lime-400 text-xs hover:bg-lime-400 hover:text-zinc-950 disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-md border border-lime-400 text-lime-400 text-xs hover:bg-lime-400 hover:text-zinc-950"
                       >
                         {p}
                       </button>
@@ -1620,34 +1429,40 @@ function OwnerAtletas({ ownerPin }) {
                     >
                       cancelar
                     </button>
+
                   </div>
+
                 ) : (
+
                   <button
-                    disabled={loading}
                     onClick={() =>
                       setAssigning(a.id)
                     }
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-800 text-zinc-400 text-xs hover:text-lime-400 hover:border-lime-400/40 disabled:opacity-40"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-800 text-zinc-400 text-xs hover:text-lime-400 hover:border-lime-400/40"
                   >
                     <PackageCheck size={14} />
                     Atribuir novo pack
                   </button>
+
                 )}
 
                 <button
-                  disabled={loading}
                   onClick={() =>
                     removeAtleta(a.id)
                   }
-                  className="text-zinc-600 hover:text-rose-400 disabled:opacity-40"
+                  className="text-zinc-600 hover:text-rose-400"
                 >
                   <Trash2 size={18} />
                 </button>
+
               </div>
+
             </div>
           );
         })}
+
       </div>
+
     </div>
   );
 }
@@ -1658,62 +1473,61 @@ function OwnerAtletas({ ownerPin }) {
 
 function OwnerSettings({
   ownerPin,
-  onPinChanged,
+  onPinChanged
 }) {
+
   const [newPin, setNewPin] = useState("");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const savePin = async () => {
+
     setError("");
-    setSaved(false);
 
     if (!/^\d{4}$/.test(newPin)) {
-      setError(
+      return setError(
         "O novo PIN deve ter 4 dígitos."
       );
-      return;
     }
 
-    setLoading(true);
-
-    const { error } = await supabase.rpc(
-      "fn_alterar_pin_dono",
-      {
-        p_pin_atual: ownerPin,
-        p_novo_pin: newPin,
-      }
-    );
-
-    setLoading(false);
+    const { error } =
+      await supabase.rpc(
+        "fn_alterar_pin_dono",
+        {
+          p_pin_atual: ownerPin,
+          p_novo_pin: newPin
+        }
+      );
 
     if (error) {
-      setError(friendlyError(error));
-      return;
+      return setError(
+        friendlyError(error)
+      );
     }
 
     onPinChanged(newPin);
     setNewPin("");
     setSaved(true);
 
-    setTimeout(() => {
-      setSaved(false);
-    }, 2500);
+    setTimeout(
+      () => setSaved(false),
+      2500
+    );
   };
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3 max-w-md">
+
       <div className="font-display text-xl tracking-wide text-zinc-200">
         Código de acesso do Duarte
       </div>
 
       <div className="text-xs text-zinc-500">
-        Este é o código pedido sempre que se entra na
-        Área do Duarte. Só tu o deves saber.
+        Este é o código pedido sempre que se entra na Área do Duarte.
       </div>
 
       <div className="flex gap-3">
+
         <input
           value={newPin}
           onChange={(e) =>
@@ -1723,18 +1537,17 @@ function OwnerSettings({
                 .slice(0, CODE_LEN)
             )
           }
-          inputMode="numeric"
-          placeholder={`Novo código (${CODE_LEN} dígitos)`}
+          placeholder="Novo código"
           className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id"
         />
 
         <button
-          disabled={loading}
           onClick={savePin}
-          className="bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 disabled:opacity-50 whitespace-nowrap"
+          className="bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300"
         >
           Guardar
         </button>
+
       </div>
 
       {error && (
@@ -1748,141 +1561,121 @@ function OwnerSettings({
           Código atualizado.
         </div>
       )}
+
     </div>
   );
 }
 
 /* ============================================================
-   AUDIT LOG
+   AUDIT
 ============================================================ */
 
 const ACTION_LABELS = {
   marcacao: {
     label: "Marcação",
-    color:
-      "bg-emerald-500/15 text-emerald-400",
+    color: "bg-emerald-500/15 text-emerald-400"
   },
 
   desmarcacao: {
     label: "Desmarcação",
-    color:
-      "bg-zinc-700/40 text-zinc-300",
+    color: "bg-zinc-700/40 text-zinc-300"
   },
 
   tentativa_bloqueada: {
-    label:
-      "Tentativa de desmarcação bloqueada",
-    color:
-      "bg-amber-500/15 text-amber-400",
-  },
+    label: "Tentativa de desmarcação bloqueada",
+    color: "bg-amber-500/15 text-amber-400"
+  }
 };
 
+function formatTimestamp(ts) {
+
+  const d = new Date(ts);
+
+  return `${isoDate(d)} às ${pad2(
+    d.getHours()
+  )}:${pad2(d.getMinutes())}`;
+}
+
 function OwnerAuditLog({ ownerPin }) {
-  const [atletas, setAtletas] = useState([]);
-  const [atletaId, setAtletaId] = useState("");
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+
+  const [atletas, setAtletas] =
+    useState([]);
+
+  const [atletaId, setAtletaId] =
+    useState("");
+
+  const [entries, setEntries] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(false);
 
   useEffect(() => {
-    let cancelled = false;
 
-    async function carregar() {
-      const { data, error } =
-        await supabase.rpc(
-          "fn_listar_atletas",
-          {
-            p_owner_pin: ownerPin,
-          }
-        );
+    supabase
+      .rpc(
+        "fn_listar_atletas",
+        {
+          p_owner_pin: ownerPin
+        }
+      )
+      .then(({ data }) => {
 
-      if (cancelled) return;
+        setAtletas(data || []);
 
-      if (error) {
-        setError(friendlyError(error));
-        return;
-      }
+        if (data && data.length > 0) {
+          setAtletaId(data[0].id);
+        }
 
-      const lista = data || [];
+      });
 
-      setAtletas(lista);
-
-      if (lista.length > 0) {
-        setAtletaId(
-          String(lista[0].id)
-        );
-      } else {
-        setAtletaId("");
-      }
-    }
-
-    carregar();
-
-    return () => {
-      cancelled = true;
-    };
   }, [ownerPin]);
 
   useEffect(() => {
-    if (!atletaId) {
-      setEntries([]);
-      return;
-    }
 
-    let cancelled = false;
+    if (!atletaId) return;
 
-    async function carregar() {
-      setLoading(true);
-      setError("");
+    setLoading(true);
 
-      const { data, error } =
-        await supabase.rpc(
-          "fn_auditoria_atleta",
-          {
-            p_owner_pin: ownerPin,
-            p_atleta_id: atletaId,
-          }
-        );
+    supabase
+      .rpc(
+        "fn_auditoria_atleta",
+        {
+          p_owner_pin: ownerPin,
+          p_atleta_id: atletaId
+        }
+      )
+      .then(({ data }) => {
 
-      if (cancelled) return;
-
-      if (error) {
-        setError(friendlyError(error));
-        setEntries([]);
+        setEntries(data || []);
         setLoading(false);
-        return;
-      }
 
-      setEntries(data || []);
-      setLoading(false);
-    }
+      });
 
-    carregar();
-
-    return () => {
-      cancelled = true;
-    };
   }, [atletaId, ownerPin]);
 
-  const atleta = atletas.find(
-    (a) => String(a.id) === String(atletaId)
-  );
+  const atleta =
+    atletas.find(
+      (a) => a.id === atletaId
+    );
 
-  const hoje = startOfDay(lisbonNow());
-  const desde = addMonths(hoje, -1);
+  const hoje =
+    startOfDay(lisbonNow());
+
+  const desde =
+    addMonths(hoje, -1);
 
   return (
     <div className="space-y-5">
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+
         <div className="font-display text-xl tracking-wide text-zinc-200">
           Registo de atividade
         </div>
 
         <div className="text-xs text-zinc-500">
-          Mostra marcações, desmarcações e tentativas de
-          desmarcação bloqueadas entre{" "}
-          {isoDate(desde)} e {isoDate(hoje)}{" "}
-          (último mês).
+          Mostra marcações, desmarcações e tentativas bloqueadas no último mês.
         </div>
 
         <select
@@ -1892,6 +1685,7 @@ function OwnerAuditLog({ ownerPin }) {
           }
           className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-72"
         >
+
           {atletas.length === 0 && (
             <option value="">
               Sem atletas
@@ -1906,16 +1700,13 @@ function OwnerAuditLog({ ownerPin }) {
               {a.nome} (#{a.numero_id})
             </option>
           ))}
+
         </select>
 
-        {error && (
-          <div className="text-rose-400 text-sm">
-            {error}
-          </div>
-        )}
       </div>
 
       <div className="divide-y divide-zinc-800 border border-zinc-800 rounded-xl overflow-hidden">
+
         {loading && (
           <div className="p-4 text-zinc-500 text-sm">
             A carregar…
@@ -1933,11 +1724,12 @@ function OwnerAuditLog({ ownerPin }) {
 
         {!loading &&
           entries.map((e, i) => {
+
             const meta =
               ACTION_LABELS[e.action] || {
                 label: e.action,
                 color:
-                  "bg-zinc-700/40 text-zinc-300",
+                  "bg-zinc-700/40 text-zinc-300"
               };
 
             return (
@@ -1945,7 +1737,9 @@ function OwnerAuditLog({ ownerPin }) {
                 key={i}
                 className="flex items-center justify-between gap-3 px-4 py-3 bg-zinc-900 flex-wrap"
               >
+
                 <div className="flex items-center gap-3">
+
                   <span
                     className={`text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap ${meta.color}`}
                   >
@@ -1955,15 +1749,21 @@ function OwnerAuditLog({ ownerPin }) {
                   <span className="text-sm text-zinc-300">
                     {e.detalhe}
                   </span>
+
                 </div>
 
                 <span className="font-mono-id text-xs text-zinc-500">
-                  {formatTimestamp(e.criado_em)}
+                  {formatTimestamp(
+                    e.criado_em
+                  )}
                 </span>
+
               </div>
             );
           })}
+
       </div>
+
     </div>
   );
 }
@@ -1973,6 +1773,7 @@ function OwnerAuditLog({ ownerPin }) {
 ============================================================ */
 
 function AtletaArea() {
+
   const [candidate, setCandidate] =
     useState(null);
 
@@ -1980,6 +1781,7 @@ function AtletaArea() {
     useState(null);
 
   if (!session) {
+
     if (!candidate) {
       return (
         <AtletaIdEntry
@@ -1988,20 +1790,45 @@ function AtletaArea() {
       );
     }
 
+    /*
+      PRIMEIRA VEZ:
+      o atleta ainda não tem código.
+    */
+
+    if (!candidate.codigo_definido) {
+      return (
+        <AtletaFirstCode
+          candidate={candidate}
+          onSuccess={setSession}
+          onBack={() =>
+            setCandidate(null)
+          }
+        />
+      );
+    }
+
+    /*
+      JÁ TEM CÓDIGO:
+      login normal.
+    */
+
     return (
       <PinGate
         title={`${candidate.nome} - ID ${candidate.numero_id}`}
         label="Insere o teu PIN para acesso à tua área"
         verify={async (digits) => {
-          const { data, error } =
-            await supabase.rpc(
-              "fn_login_atleta",
-              {
-                p_numero_id:
-                  candidate.numero_id,
-                p_codigo: digits,
-              }
-            );
+
+          const {
+            data,
+            error
+          } = await supabase.rpc(
+            "fn_login_atleta",
+            {
+              p_numero_id:
+                candidate.numero_id,
+              p_codigo: digits
+            }
+          );
 
           if (error) throw error;
 
@@ -2011,11 +1838,13 @@ function AtletaArea() {
 
           return {
             ...data[0],
-            codigo: digits,
+            codigo: digits
           };
         }}
         onSuccess={setSession}
-        onBack={() => setCandidate(null)}
+        onBack={() =>
+          setCandidate(null)
+        }
       />
     );
   }
@@ -2037,73 +1866,110 @@ function AtletaArea() {
 ============================================================ */
 
 function AtletaIdEntry({ onFound }) {
-  const [digits, setDigits] = useState("");
-  const [error, setError] = useState("");
+
+  const [digits, setDigits] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
   const [checking, setChecking] =
     useState(false);
 
   const MAX_ID_LEN = 6;
 
   const press = (d) => {
-    if (checking) return;
-    if (digits.length >= MAX_ID_LEN) return;
 
-    setError("");
-    setDigits((p) => p + d);
+    if (
+      !checking &&
+      digits.length < MAX_ID_LEN
+    ) {
+      setError("");
+      setDigits(
+        (p) => p + d
+      );
+    }
   };
 
   const clearAll = () => {
-    if (checking) return;
-
     setDigits("");
     setError("");
   };
 
   const submit = async () => {
-    if (!digits || checking) return;
+
+    if (!digits || checking) {
+      return;
+    }
 
     setChecking(true);
     setError("");
 
     try {
-      const { data, error } =
-        await supabase.rpc(
-          "fn_buscar_nome_atleta",
-          {
-            p_numero_id: Number(digits),
-          }
-        );
+
+      const {
+        data,
+        error
+      } = await supabase.rpc(
+        "fn_buscar_nome_atleta",
+        {
+          p_numero_id:
+            Number(digits)
+        }
+      );
 
       if (error) throw error;
 
       if (data && data.length > 0) {
+
+        /*
+          A função agora deve devolver
+          também codigo_definido.
+        */
+
         onFound(data[0]);
+
       } else {
-        setError("ID não reconhecido.");
+
+        setError(
+          "ID não reconhecido."
+        );
+
         setDigits("");
       }
+
     } catch (e) {
-      setError(friendlyError(e));
+
+      setError(
+        friendlyError(e)
+      );
+
     } finally {
+
       setChecking(false);
     }
   };
 
   return (
     <main className="flex flex-col items-center justify-center px-6 py-16 gap-6">
+
       <div className="flex items-center gap-2 text-zinc-500 text-sm">
         <KeyRound size={16} />
         Introduz o teu ID de atleta
       </div>
 
       <div className="min-h-[4.5rem] sm:min-h-[5.5rem] flex items-end justify-center">
+
         <span className="font-mono-id text-5xl sm:text-6xl tracking-widest text-lime-400">
+
           {digits || (
             <span className="text-zinc-700">
               –
             </span>
           )}
+
         </span>
+
       </div>
 
       {checking && (
@@ -2119,33 +1985,34 @@ function AtletaIdEntry({ onFound }) {
       )}
 
       <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(
-          (n) => (
-            <button
-              key={n}
-              disabled={checking}
-              onClick={() =>
-                press(String(n))
-              }
-              className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400 active:scale-95 disabled:opacity-40"
-            >
-              {n}
-            </button>
-          )
-        )}
+
+        {[1,2,3,4,5,6,7,8,9].map((n) => (
+          <button
+            key={n}
+            disabled={checking}
+            onClick={() =>
+              press(String(n))
+            }
+            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400 active:scale-95 disabled:opacity-40"
+          >
+            {n}
+          </button>
+        ))}
 
         <button
           disabled={checking}
           onClick={clearAll}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 disabled:opacity-40"
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400"
         >
           <Ban size={20} />
         </button>
 
         <button
           disabled={checking}
-          onClick={() => press("0")}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400 active:scale-95 disabled:opacity-40"
+          onClick={() =>
+            press("0")
+          }
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400"
         >
           0
         </button>
@@ -2161,34 +2028,516 @@ function AtletaIdEntry({ onFound }) {
         >
           <CheckCircle2 size={22} />
         </button>
+
       </div>
+
     </main>
   );
 }
 
 /* ============================================================
-   ATLETA DASHBOARD
+   PRIMEIRA DEFINIÇÃO DO CÓDIGO
+============================================================ */
+
+function AtletaFirstCode({
+  candidate,
+  onSuccess,
+  onBack
+}) {
+
+  const [step, setStep] =
+    useState("create");
+
+  const [digits, setDigits] =
+    useState("");
+
+  const [firstCode, setFirstCode] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const press = (d) => {
+
+    if (
+      saving ||
+      digits.length >= CODE_LEN
+    ) {
+      return;
+    }
+
+    setError("");
+
+    setDigits(
+      (p) => p + d
+    );
+  };
+
+  useEffect(() => {
+
+    if (
+      step === "create" &&
+      digits.length === CODE_LEN
+    ) {
+
+      setFirstCode(digits);
+      setDigits("");
+      setStep("confirm");
+    }
+
+  }, [digits, step]);
+
+  const confirmCode = async () => {
+
+    if (digits.length !== CODE_LEN) {
+      return;
+    }
+
+    if (digits !== firstCode) {
+
+      setError(
+        "Os códigos não coincidem."
+      );
+
+      setDigits("");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+
+      const {
+        data,
+        error
+      } = await supabase.rpc(
+        "fn_definir_codigo_atleta",
+        {
+          p_numero_id:
+            candidate.numero_id,
+          p_novo_codigo: digits
+        }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      /*
+        Depois de guardar o código,
+        fazemos login automaticamente.
+      */
+
+      const {
+        data: loginData,
+        error: loginError
+      } = await supabase.rpc(
+        "fn_login_atleta",
+        {
+          p_numero_id:
+            candidate.numero_id,
+          p_codigo: digits
+        }
+      );
+
+      if (loginError) {
+        throw loginError;
+      }
+
+      if (
+        !loginData ||
+        loginData.length === 0
+      ) {
+        throw new Error(
+          "CREDENCIAIS_INVALIDAS"
+        );
+      }
+
+      onSuccess({
+        ...loginData[0],
+        codigo: digits
+      });
+
+    } catch (e) {
+
+      setError(
+        friendlyError(e)
+      );
+
+    } finally {
+
+      setSaving(false);
+    }
+  };
+
+  const clear = () => {
+
+    if (saving) return;
+
+    setDigits("");
+    setError("");
+  };
+
+  const goBackStep = () => {
+
+    if (saving) return;
+
+    setError("");
+
+    if (step === "confirm") {
+      setFirstCode("");
+      setDigits("");
+      setStep("create");
+    } else {
+      onBack();
+    }
+  };
+
+  return (
+    <main className="flex flex-col items-center justify-center px-6 py-16 gap-6">
+
+      <button
+        onClick={goBackStep}
+        className="self-start ml-2 -mb-2 flex items-center gap-1 text-xs text-zinc-500 hover:text-lime-400"
+      >
+        <ArrowLeft size={14} />
+        Voltar
+      </button>
+
+      <div className="text-center">
+
+        <div className="font-display text-2xl tracking-wide text-zinc-100">
+          {candidate.nome} — ID {candidate.numero_id}
+        </div>
+
+        <div className="text-sm text-zinc-500 mt-2 max-w-md">
+          {step === "create"
+            ? "É a tua primeira vez. Escolhe um código de 4 dígitos para passares a aceder à tua área."
+            : "Repete o código de 4 dígitos para confirmar."}
+        </div>
+
+      </div>
+
+      <div className="flex items-center gap-2 text-zinc-500 text-sm">
+        <KeyRound size={16} />
+        {step === "create"
+          ? "Escolhe o teu código"
+          : "Confirma o teu código"}
+      </div>
+
+      <div className="flex gap-3">
+
+        {Array.from({
+          length: CODE_LEN
+        }).map((_, i) => (
+
+          <div
+            key={i}
+            className={`w-16 h-20 sm:w-20 sm:h-24 rounded-xl border-2 flex items-center justify-center font-mono-id text-4xl sm:text-5xl ${
+              digits[i]
+                ? "border-lime-400 text-lime-400"
+                : "border-zinc-800 text-zinc-700"
+            }`}
+          >
+            {digits[i]
+              ? "•"
+              : "–"}
+          </div>
+
+        ))}
+
+      </div>
+
+      {saving && (
+        <div className="text-zinc-500 text-xs">
+          A guardar código…
+        </div>
+      )}
+
+      {error && (
+        <div className="text-rose-400 text-sm text-center">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+
+        {[1,2,3,4,5,6,7,8,9].map((n) => (
+
+          <button
+            key={n}
+            disabled={saving}
+            onClick={() =>
+              press(String(n))
+            }
+            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400 active:scale-95 disabled:opacity-40"
+          >
+            {n}
+          </button>
+
+        ))}
+
+        <button
+          disabled={saving}
+          onClick={clear}
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400"
+        >
+          <Ban size={20} />
+        </button>
+
+        <button
+          disabled={saving}
+          onClick={() =>
+            press("0")
+          }
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400"
+        >
+          0
+        </button>
+
+        <button
+          onClick={confirmCode}
+          disabled={
+            digits.length !== CODE_LEN ||
+            saving
+          }
+          className={`aspect-square rounded-xl flex items-center justify-center ${
+            digits.length === CODE_LEN &&
+            !saving
+              ? "bg-lime-400 text-zinc-950 hover:bg-lime-300"
+              : "bg-zinc-900 border border-zinc-800 text-zinc-700"
+          }`}
+        >
+          <CheckCircle2 size={22} />
+        </button>
+
+      </div>
+
+    </main>
+  );
+}
+
+/* ============================================================
+   ALTERAR CÓDIGO DO ATLETA
+============================================================ */
+
+function ChangeAthleteCode({
+  session,
+  onChanged,
+  onCancel
+}) {
+
+  const [currentCode, setCurrentCode] =
+    useState("");
+
+  const [newCode, setNewCode] =
+    useState("");
+
+  const [confirmCode, setConfirmCode] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const save = async () => {
+
+    setError("");
+
+    if (!/^\d{4}$/.test(currentCode)) {
+      return setError(
+        "O código atual deve ter 4 dígitos."
+      );
+    }
+
+    if (!/^\d{4}$/.test(newCode)) {
+      return setError(
+        "O novo código deve ter 4 dígitos."
+      );
+    }
+
+    if (newCode !== confirmCode) {
+      return setError(
+        "Os novos códigos não coincidem."
+      );
+    }
+
+    if (newCode === currentCode) {
+      return setError(
+        "O novo código deve ser diferente do atual."
+      );
+    }
+
+    setSaving(true);
+
+    try {
+
+      const {
+        error
+      } = await supabase.rpc(
+        "fn_alterar_codigo_atleta_proprio",
+        {
+          p_numero_id:
+            session.numero_id,
+          p_codigo_atual:
+            currentCode,
+          p_novo_codigo:
+            newCode
+        }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      /*
+        Atualizamos o código da sessão
+        para o novo código.
+      */
+
+      onChanged({
+        ...session,
+        codigo: newCode
+      });
+
+    } catch (e) {
+
+      setError(
+        friendlyError(e)
+      );
+
+    } finally {
+
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
+
+      <div>
+
+        <div className="font-display text-xl tracking-wide text-zinc-200">
+          Alterar código
+        </div>
+
+        <div className="text-xs text-zinc-500 mt-1">
+          O código é pessoal e será usado para entrar na tua área.
+        </div>
+
+      </div>
+
+      <div className="space-y-3">
+
+        <input
+          type="password"
+          inputMode="numeric"
+          maxLength={4}
+          value={currentCode}
+          onChange={(e) =>
+            setCurrentCode(
+              e.target.value
+                .replace(/\D/g, "")
+                .slice(0, 4)
+            )
+          }
+          placeholder="Código atual"
+          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id"
+        />
+
+        <input
+          type="password"
+          inputMode="numeric"
+          maxLength={4}
+          value={newCode}
+          onChange={(e) =>
+            setNewCode(
+              e.target.value
+                .replace(/\D/g, "")
+                .slice(0, 4)
+            )
+          }
+          placeholder="Novo código"
+          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id"
+        />
+
+        <input
+          type="password"
+          inputMode="numeric"
+          maxLength={4}
+          value={confirmCode}
+          onChange={(e) =>
+            setConfirmCode(
+              e.target.value
+                .replace(/\D/g, "")
+                .slice(0, 4)
+            )
+          }
+          placeholder="Repetir novo código"
+          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id"
+        />
+
+      </div>
+
+      {error && (
+        <div className="text-rose-400 text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+
+        <button
+          onClick={save}
+          disabled={saving}
+          className="bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 disabled:opacity-40"
+        >
+          {saving
+            ? "A guardar…"
+            : "Alterar código"}
+        </button>
+
+        <button
+          onClick={onCancel}
+          disabled={saving}
+          className="border border-zinc-800 text-zinc-400 rounded-md px-4 py-2 text-sm hover:text-zinc-200"
+        >
+          Cancelar
+        </button>
+
+      </div>
+
+    </div>
+  );
+}
+
+/* ============================================================
+   DASHBOARD ATLETA
 ============================================================ */
 
 function AtletaDashboard({
   session,
   onSessionUpdate,
-  onSwitch,
+  onSwitch
 }) {
-  const today = startOfDay(lisbonNow());
 
-  /*
-   * Mantemos a mesma regra da tua aplicação:
-   * hoje + 1 mês.
-   */
-  const maxBookingDate = addMonths(
-    today,
-    1
-  );
+  const today =
+    startOfDay(lisbonNow());
 
-  const [date, setDate] = useState(today);
+  const maxBookingDate =
+    addMonths(today, 1);
 
-  const [turmas, setTurmas] = useState([]);
+  const [date, setDate] =
+    useState(today);
+
+  const [turmas, setTurmas] =
+    useState([]);
 
   const [minhasMarcacoes, setMinhasMarcacoes] =
     useState([]);
@@ -2196,10 +2545,8 @@ function AtletaDashboard({
   const [historico, setHistorico] =
     useState([]);
 
-  const [
-    disponibilidadeMes,
-    setDisponibilidadeMes,
-  ] = useState([]);
+  const [disponibilidadeMes, setDisponibilidadeMes] =
+    useState([]);
 
   const [ocupacaoHoje, setOcupacaoHoje] =
     useState({});
@@ -2213,44 +2560,51 @@ function AtletaDashboard({
   const [busy, setBusy] =
     useState(false);
 
-  const feedbackTimer = useRef(null);
+  const [showChangeCode, setShowChangeCode] =
+    useState(false);
+
+  const feedbackTimer =
+    useRef(null);
 
   const iso = isoDate(date);
 
-  const isPastDay = date < today;
+  const isPastDay =
+    date < today;
 
-  const isSameDayAsToday = sameDay(
-    date,
-    today
-  );
+  const isSameDayAsToday =
+    sameDay(date, today);
 
-  const notify = (status, text) => {
-    clearTimeout(feedbackTimer.current);
+  const notify = (
+    status,
+    text
+  ) => {
+
+    clearTimeout(
+      feedbackTimer.current
+    );
 
     setFeedback({
       status,
-      text,
+      text
     });
 
-    feedbackTimer.current = setTimeout(() => {
-      setFeedback(null);
-    }, 4000);
+    feedbackTimer.current =
+      setTimeout(
+        () => setFeedback(null),
+        4000
+      );
   };
 
-  useEffect(() => {
-    return () => {
-      clearTimeout(feedbackTimer.current);
-    };
-  }, []);
+  const carregarTudo =
+    useCallback(async () => {
 
-  const carregarTudo = useCallback(
-    async () => {
       const [
-        { data: t, error: tError },
-        { data: minhas, error: minhasError },
-        { data: hist, error: histError },
-        { data: loginRow, error: loginError },
+        { data: t },
+        { data: minhas },
+        { data: hist },
+        { data: loginRow }
       ] = await Promise.all([
+
         supabase.rpc(
           "fn_listar_turmas"
         ),
@@ -2261,7 +2615,7 @@ function AtletaDashboard({
             p_numero_id:
               session.numero_id,
             p_codigo:
-              session.codigo,
+              session.codigo
           }
         ),
 
@@ -2271,7 +2625,7 @@ function AtletaDashboard({
             p_numero_id:
               session.numero_id,
             p_codigo:
-              session.codigo,
+              session.codigo
           }
         ),
 
@@ -2281,48 +2635,38 @@ function AtletaDashboard({
             p_numero_id:
               session.numero_id,
             p_codigo:
-              session.codigo,
+              session.codigo
           }
-        ),
+        )
       ]);
-
-      const firstError =
-        tError ||
-        minhasError ||
-        histError ||
-        loginError;
-
-      if (firstError) {
-        notify(
-          "error",
-          friendlyError(firstError)
-        );
-        return;
-      }
 
       setTurmas(t || []);
       setMinhasMarcacoes(
         minhas || []
       );
-      setHistorico(hist || []);
+      setHistorico(
+        hist || []
+      );
 
       if (
         loginRow &&
         loginRow.length > 0
       ) {
-        onSessionUpdate((prev) => ({
-          ...prev,
-          ...loginRow[0],
-          codigo: session.codigo,
-        }));
+        onSessionUpdate(
+          (prev) => ({
+            ...prev,
+            ...loginRow[0],
+            codigo:
+              session.codigo
+          })
+        );
       }
-    },
-    [
+
+    }, [
       session.numero_id,
       session.codigo,
-      onSessionUpdate,
-    ]
-  );
+      onSessionUpdate
+    ]);
 
   useEffect(() => {
     carregarTudo();
@@ -2330,10 +2674,13 @@ function AtletaDashboard({
 
   const carregarOcupacaoDoDia =
     useCallback(
-      async (targetDate, turmasList) => {
-        const dIso = isoDate(
-          targetDate
-        );
+      async (
+        targetDate,
+        turmasList
+      ) => {
+
+        const dIso =
+          isoDate(targetDate);
 
         const templatesDoDia =
           turmasList.filter(
@@ -2346,7 +2693,6 @@ function AtletaDashboard({
           templatesDoDia.length === 0
         ) {
           setOcupacaoHoje({});
-          setLoadingDia(false);
           return;
         }
 
@@ -2359,37 +2705,16 @@ function AtletaDashboard({
                 "fn_disponibilidade_turma",
                 {
                   p_turma_id: t.id,
-                  p_data: dIso,
+                  p_data: dIso
                 }
               )
             )
           );
 
-        const firstError =
-          results.find(
-            (r) => r.error
-          );
-
-        if (firstError?.error) {
-          notify(
-            "error",
-            friendlyError(
-              firstError.error
-            )
-          );
-
-          setLoadingDia(false);
-          return;
-        }
-
         const map = {};
 
         templatesDoDia.forEach(
           (t, i) => {
-            /*
-             * O RPC devolve apenas booleano.
-             * Nunca mostramos a contagem real ao atleta.
-             */
             map[t.id] =
               results[i].data === true;
           }
@@ -2402,55 +2727,50 @@ function AtletaDashboard({
     );
 
   useEffect(() => {
+
     if (turmas.length > 0) {
       carregarOcupacaoDoDia(
         date,
         turmas
       );
-    } else {
-      setOcupacaoHoje({});
     }
+
   }, [
     date,
     turmas,
-    carregarOcupacaoDoDia,
+    carregarOcupacaoDoDia
   ]);
 
   const handleMonthChange =
     useCallback(
       async (viewMonth) => {
-        const desde = isoDate(
-          new Date(
-            viewMonth.getFullYear(),
-            viewMonth.getMonth(),
-            1
-          )
-        );
 
-        const ate = isoDate(
-          new Date(
-            viewMonth.getFullYear(),
-            viewMonth.getMonth() + 1,
-            0
-          )
-        );
+        const desde =
+          isoDate(
+            new Date(
+              viewMonth.getFullYear(),
+              viewMonth.getMonth(),
+              1
+            )
+          );
 
-        const { data, error } =
+        const ate =
+          isoDate(
+            new Date(
+              viewMonth.getFullYear(),
+              viewMonth.getMonth() + 1,
+              0
+            )
+          );
+
+        const { data } =
           await supabase.rpc(
             "fn_disponibilidade_periodo",
             {
               p_desde: desde,
-              p_ate: ate,
+              p_ate: ate
             }
           );
-
-        if (error) {
-          notify(
-            "error",
-            friendlyError(error)
-          );
-          return;
-        }
 
         setDisponibilidadeMes(
           data || []
@@ -2459,7 +2779,10 @@ function AtletaDashboard({
       []
     );
 
-  const book = async (template) => {
+  const book = async (
+    template
+  ) => {
+
     if (busy) return;
 
     setBusy(true);
@@ -2474,12 +2797,14 @@ function AtletaDashboard({
             session.codigo,
           p_turma_id:
             template.id,
-          p_data: iso,
+          p_data:
+            iso
         }
       );
 
+    setBusy(false);
+
     if (error) {
-      setBusy(false);
       notify(
         "error",
         friendlyError(error)
@@ -2489,9 +2814,7 @@ function AtletaDashboard({
 
     notify(
       "success",
-      `Aula de ${hhmm(
-        template.hora
-      )} marcada com sucesso!`
+      `Aula de ${hhmm(template.hora)} marcada com sucesso!`
     );
 
     await carregarTudo();
@@ -2500,41 +2823,19 @@ function AtletaDashboard({
       date,
       turmas
     );
-
-    setBusy(false);
   };
 
   const cancel = async (
-    bookingId,
-    bookingDate,
-    bookingHour
+    bookingId
   ) => {
-    if (busy) return;
 
-    /*
-     * Bloqueio também na interface.
-     * A regra verdadeira continua no Postgres.
-     */
-    if (
-      bookingDate &&
-      bookingHour &&
-      !canCancelClass(
-        bookingDate,
-        bookingHour
-      )
-    ) {
-      notify(
-        "error",
-        ERROR_MESSAGES.MENOS_DE_12H
-      );
-      return;
-    }
+    if (busy) return;
 
     setBusy(true);
 
     const {
       data,
-      error,
+      error
     } = await supabase.rpc(
       "fn_desmarcar_aula",
       {
@@ -2543,16 +2844,19 @@ function AtletaDashboard({
         p_codigo:
           session.codigo,
         p_booking_id:
-          bookingId,
+          bookingId
       }
     );
 
+    setBusy(false);
+
     if (error) {
-      setBusy(false);
+
       notify(
         "error",
         friendlyError(error)
       );
+
       return;
     }
 
@@ -2563,15 +2867,13 @@ function AtletaDashboard({
       resultado &&
       resultado.sucesso === false
     ) {
-      setBusy(false);
 
       notify(
         "error",
         ERROR_MESSAGES[
           resultado.motivo
         ] ||
-          resultado.motivo ||
-          "Não foi possível cancelar a marcação."
+        resultado.motivo
       );
 
       return;
@@ -2588,13 +2890,12 @@ function AtletaDashboard({
       date,
       turmas
     );
-
-    setBusy(false);
   };
 
   const dismiss = async (
     bookingId
   ) => {
+
     if (busy) return;
 
     setBusy(true);
@@ -2608,12 +2909,13 @@ function AtletaDashboard({
           p_codigo:
             session.codigo,
           p_booking_id:
-            bookingId,
+            bookingId
         }
       );
 
+    setBusy(false);
+
     if (error) {
-      setBusy(false);
 
       notify(
         "error",
@@ -2623,57 +2925,58 @@ function AtletaDashboard({
       return;
     }
 
-    await carregarTudo();
-
-    setBusy(false);
+    carregarTudo();
   };
 
-  const templatesHoje = turmas
-    .filter(
-      (t) =>
-        t.dia_semana ===
-        date.getDay()
-    )
-    .sort((a, b) =>
-      a.hora.localeCompare(b.hora)
-    );
+  const templatesHoje =
+    turmas
+      .filter(
+        (t) =>
+          t.dia_semana ===
+          date.getDay()
+      )
+      .sort(
+        (a, b) =>
+          a.hora.localeCompare(
+            b.hora
+          )
+      );
 
   const restantes =
     session.pack_total -
     session.pack_usado;
 
   const pct =
-    session.pack_total > 0
-      ? Math.max(
-          0,
-          Math.min(
-            100,
-            (restantes /
-              session.pack_total) *
-              100
-          )
-        )
-      : 0;
+    Math.max(
+      0,
+      Math.min(
+        100,
+        (restantes /
+          session.pack_total) *
+          100
+      )
+    );
 
   return (
     <main className="px-6 py-8 max-w-3xl w-full mx-auto space-y-6">
-      {/* =====================================================
-          1. NOME + PACK
-      ===================================================== */}
+
+      {/* PERFIL */}
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+
         <div>
+
           <div className="font-display text-2xl tracking-wide text-zinc-100">
             {session.nome}
           </div>
 
           <div className="text-sm text-zinc-500">
             {restantes} de{" "}
-            {session.pack_total}{" "}
-            treinos restantes no pack
+            {session.pack_total} treinos restantes no pack
           </div>
 
           <div className="w-48 h-1.5 bg-zinc-800 rounded-full mt-1 overflow-hidden">
+
             <div
               className={`h-full ${
                 restantes === 0
@@ -2681,176 +2984,184 @@ function AtletaDashboard({
                   : "bg-lime-400"
               }`}
               style={{
-                width: `${pct}%`,
+                width: `${pct}%`
               }}
             />
+
           </div>
+
         </div>
 
-        <button
-          onClick={onSwitch}
-          className="flex items-center gap-2 text-sm text-zinc-500 hover:text-lime-400"
-        >
-          <ArrowLeft size={16} />
-          Sair
-        </button>
+        <div className="flex items-center gap-4">
+
+          <button
+            onClick={() =>
+              setShowChangeCode(
+                (v) => !v
+              )
+            }
+            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-lime-400"
+          >
+            <Settings size={16} />
+            Código
+          </button>
+
+          <button
+            onClick={onSwitch}
+            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-lime-400"
+          >
+            <ArrowLeft size={16} />
+            Sair
+          </button>
+
+        </div>
+
       </div>
 
-      {/* =====================================================
-          FEEDBACK
-      ===================================================== */}
+      {showChangeCode && (
+        <ChangeAthleteCode
+          session={session}
+          onChanged={(updated) => {
+
+            onSessionUpdate(updated);
+            setShowChangeCode(false);
+
+            notify(
+              "success",
+              "Código alterado com sucesso."
+            );
+          }}
+          onCancel={() =>
+            setShowChangeCode(false)
+          }
+        />
+      )}
 
       {feedback && (
         <div
           className={`rounded-xl px-4 py-3 text-sm border flex items-center gap-2 ${
-            feedback.status ===
-            "success"
+            feedback.status === "success"
               ? "bg-emerald-500/15 border-emerald-500 text-emerald-400"
               : "bg-rose-500/15 border-rose-500 text-rose-400"
           }`}
         >
-          {feedback.status ===
-          "success" ? (
-            <CheckCircle2 size={16} />
-          ) : (
-            <XCircle size={16} />
-          )}
+          {feedback.status === "success"
+            ? <CheckCircle2 size={16} />
+            : <XCircle size={16} />}
 
           {feedback.text}
         </div>
       )}
 
-      {/* =====================================================
-          2. MINHAS AULAS
-      ===================================================== */}
+      {/* MINHAS AULAS */}
 
       <div>
+
         <div className="font-display text-xl tracking-wide text-zinc-200 mb-3">
           As minhas aulas marcadas
         </div>
 
         <div className="divide-y divide-zinc-800 border border-zinc-800 rounded-xl overflow-hidden">
-          {minhasMarcacoes.length ===
-            0 && (
+
+          {minhasMarcacoes.length === 0 && (
             <div className="p-4 text-zinc-500 text-sm">
-              Ainda não tens aulas
-              marcadas.
+              Ainda não tens aulas marcadas.
             </div>
           )}
 
-          {minhasMarcacoes.map(
-            (b) => {
-              const concluida =
-                classDateTime(
-                  b.data,
-                  b.hora
-                ) <= lisbonNow();
+          {minhasMarcacoes.map((b) => {
 
-              const podeCancelar =
-                !concluida &&
-                canCancelClass(
-                  b.data,
-                  b.hora
-                );
+            const concluida =
+              classDateTime(
+                b.data,
+                b.hora
+              ) <= lisbonNow();
 
-              return (
-                <div
-                  key={b.booking_id}
-                  className="flex items-center justify-between gap-3 px-4 py-3 bg-zinc-900 text-sm flex-wrap"
-                >
-                  <span className="text-zinc-300">
-                    {b.data} —{" "}
-                    {DIAS[
-                      b.dia_semana
-                    ]}{" "}
-                    às{" "}
-                    <span className="font-mono-id text-lime-400">
-                      {hhmm(
-                        b.hora
-                      )}
-                    </span>
+            return (
+              <div
+                key={b.booking_id}
+                className="flex items-center justify-between gap-3 px-4 py-3 bg-zinc-900 text-sm flex-wrap"
+              >
+
+                <span className="text-zinc-300">
+                  {b.data} —{" "}
+                  {DIAS[b.dia_semana]} às{" "}
+                  <span className="font-mono-id text-lime-400">
+                    {hhmm(b.hora)}
                   </span>
+                </span>
 
-                  {concluida ? (
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-medium px-2 py-1 rounded-md bg-sky-500/15 text-sky-400">
-                        Aula concluída
-                      </span>
+                {concluida ? (
 
-                      <button
-                        disabled={
-                          busy
-                        }
-                        onClick={() =>
-                          dismiss(
-                            b.booking_id
-                          )
-                        }
-                        className="text-xs text-zinc-500 hover:text-lime-400 underline disabled:opacity-40"
-                      >
-                        Descartar
-                      </button>
-                    </div>
-                  ) : podeCancelar ? (
+                  <div className="flex items-center gap-3">
+
+                    <span className="text-xs font-medium px-2 py-1 rounded-md bg-sky-500/15 text-sky-400">
+                      Aula concluída
+                    </span>
+
                     <button
                       disabled={busy}
                       onClick={() =>
-                        cancel(
-                          b.booking_id,
-                          b.data,
-                          b.hora
+                        dismiss(
+                          b.booking_id
                         )
                       }
-                      className="text-zinc-600 hover:text-rose-400 disabled:opacity-40"
-                      title="Cancelar marcação"
+                      className="text-xs text-zinc-500 hover:text-lime-400 underline"
                     >
-                      <Trash2 size={16} />
+                      Descartar
                     </button>
-                  ) : (
-                    <span className="text-xs text-amber-400">
-                      Menos de 12h
-                    </span>
-                  )}
-                </div>
-              );
-            }
-          )}
+
+                  </div>
+
+                ) : (
+
+                  <button
+                    onClick={() =>
+                      cancel(
+                        b.booking_id
+                      )
+                    }
+                    className="text-zinc-600 hover:text-rose-400"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+
+                )}
+
+              </div>
+            );
+          })}
+
         </div>
+
       </div>
 
-      {/* =====================================================
-          3. CALENDÁRIO
-      ===================================================== */}
+      {/* CALENDÁRIO */}
 
       <div>
+
         <div className="font-display text-xl tracking-wide text-zinc-200 mb-1">
           Marcar aula
         </div>
 
         <div className="text-xs text-zinc-500 mb-3">
-          Pode marcar ou desmarcar entre
-          hoje e{" "}
+          Podes marcar entre hoje e{" "}
           {maxBookingDate.getDate()} de{" "}
-          {
-            MESES[
-              maxBookingDate.getMonth()
-            ]
-          }
-          . Pode desmarcar aulas até
-          12h antes.
+          {MESES[maxBookingDate.getMonth()]}.
+          Podes desmarcar até 1 hora antes da aula.
         </div>
 
         <div className="grid md:grid-cols-[minmax(0,380px)_1fr] gap-5 items-start">
+
           <MonthCalendar
             selected={date}
             onSelect={setDate}
-            maxDate={
-              maxBookingDate
-            }
+            maxDate={maxBookingDate}
             onMonthChange={
               handleMonthChange
             }
             renderMarker={(d) => {
+
               const dStart =
                 startOfDay(d);
 
@@ -2858,11 +3169,11 @@ function AtletaDashboard({
                 isoDate(d);
 
               if (dStart <= today) {
+
                 const foiTreinar =
                   historico.some(
                     (h) =>
-                      h.data ===
-                      dIso
+                      h.data === dIso
                   );
 
                 if (!foiTreinar) {
@@ -2880,13 +3191,10 @@ function AtletaDashboard({
               const rows =
                 disponibilidadeMes.filter(
                   (r) =>
-                    r.data ===
-                    dIso
+                    r.data === dIso
                 );
 
-              if (
-                rows.length === 0
-              ) {
+              if (rows.length === 0) {
                 return null;
               }
 
@@ -2909,68 +3217,61 @@ function AtletaDashboard({
           />
 
           <div className="space-y-3">
+
             <div className="text-sm text-zinc-500">
-              {DIAS[
-                date.getDay()
-              ]}
-              , {date.getDate()} de{" "}
-              {
-                MESES[
-                  date.getMonth()
-                ]
-              }
+              {DIAS[date.getDay()]},{" "}
+              {date.getDate()} de{" "}
+              {MESES[date.getMonth()]}
             </div>
 
             {isPastDay ? (
+
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2">
+
                 <div className="flex items-center gap-2 text-zinc-500 text-sm">
                   <AlertTriangle size={14} />
-                  Este dia já passou —
-                  não é possível fazer
-                  alterações.
+                  Este dia já passou — não é possível fazer alterações.
                 </div>
 
                 {historico.some(
                   (h) =>
                     h.data === iso
                 ) ? (
+
                   <ul className="text-sm text-zinc-300 space-y-1">
+
                     {historico
                       .filter(
                         (h) =>
-                          h.data ===
-                          iso
+                          h.data === iso
                       )
                       .map((h, i) => (
                         <li key={i}>
-                          ⭐ Foste à aula
-                          das{" "}
-                          {hhmm(
-                            h.hora
-                          )}
+                          ⭐ Foste à aula das{" "}
+                          {hhmm(h.hora)}
                         </li>
                       ))}
+
                   </ul>
+
                 ) : (
+
                   <div className="text-sm text-zinc-600">
-                    Não tens registo de
-                    treinos neste dia.
+                    Não tens registo de treinos neste dia.
                   </div>
+
                 )}
+
               </div>
+
             ) : (
+
               <>
-                {templatesHoje.length ===
-                  0 && (
+
+                {templatesHoje.length === 0 && (
                   <div className="text-zinc-500 text-sm bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                    Não há turmas
-                    disponíveis à{" "}
-                    {
-                      DIAS[
-                        date.getDay()
-                      ]
-                    }
-                    .
+                    Não há turmas disponíveis à{" "}
+                    {DIAS[date.getDay()]}.
                   </div>
                 )}
 
@@ -2981,157 +3282,145 @@ function AtletaDashboard({
                 )}
 
                 {!loadingDia &&
-                  templatesHoje.map(
-                    (t) => {
-                      const disponivel =
-                        ocupacaoHoje[
-                          t.id
-                        ] !== false;
+                  templatesHoje.map((t) => {
 
-                      const cheio =
-                        !disponivel;
+                    const disponivel =
+                      ocupacaoHoje[t.id] !== false;
 
-                      const minhaMarcacao =
-                        minhasMarcacoes.find(
-                          (b) =>
-                            b.turma_id ===
-                              t.id &&
-                            b.data ===
-                              iso
-                        );
+                    const cheio =
+                      !disponivel;
 
-                      const jaPassou =
-                        isSameDayAsToday &&
-                        classDateTime(
-                          iso,
-                          t.hora
-                        ) <=
-                          lisbonNow();
+                    const minhaMarcacao =
+                      minhasMarcacoes.find(
+                        (b) =>
+                          b.turma_id ===
+                            t.id &&
+                          b.data === iso
+                      );
 
-                      const podeCancelar =
-                        minhaMarcacao &&
-                        !jaPassou &&
-                        canCancelClass(
-                          iso,
-                          t.hora
-                        );
+                    const jaPassou =
+                      isSameDayAsToday &&
+                      classDateTime(
+                        iso,
+                        t.hora
+                      ) <= lisbonNow();
 
-                      return (
-                        <div
-                          key={t.id}
-                          className={`bg-zinc-900 border rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap ${
-                            cheio
-                              ? "border-rose-500/40"
-                              : "border-zinc-800"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="font-mono-id text-lime-400 text-lg">
-                              {hhmm(
-                                t.hora
-                              )}
-                            </span>
+                    return (
+                      <div
+                        key={t.id}
+                        className={`bg-zinc-900 border rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap ${
+                          cheio
+                            ? "border-rose-500/40"
+                            : "border-zinc-800"
+                        }`}
+                      >
 
-                            {jaPassou ? (
-                              <span className="text-xs font-medium px-2 py-1 rounded-md bg-amber-500/15 text-amber-400">
-                                Já passou
-                              </span>
-                            ) : (
-                              <span
-                                className={`text-xs font-medium px-2 py-1 rounded-md ${
-                                  cheio
-                                    ? "bg-rose-500/15 text-rose-400"
-                                    : "bg-emerald-500/15 text-emerald-400"
-                                }`}
-                              >
-                                {cheio
-                                  ? "Turma completa"
-                                  : "Vaga disponível"}
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex items-center gap-3">
 
-                          {minhaMarcacao ? (
-                            jaPassou ? (
-                              <span className="text-sky-400 text-sm flex items-center gap-1">
-                                <CheckCircle2
-                                  size={16}
-                                />
-                                Aula concluída
-                              </span>
-                            ) : podeCancelar ? (
-                              <div className="flex items-center gap-3">
-                                <span className="text-emerald-400 text-sm flex items-center gap-1">
-                                  <CheckCircle2
-                                    size={16}
-                                  />
-                                  Marcada
-                                </span>
+                          <span className="font-mono-id text-lime-400 text-lg">
+                            {hhmm(t.hora)}
+                          </span>
 
-                                <button
-                                  disabled={
-                                    busy
-                                  }
-                                  onClick={() =>
-                                    cancel(
-                                      minhaMarcacao.booking_id,
-                                      iso,
-                                      t.hora
-                                    )
-                                  }
-                                  className="text-xs text-zinc-500 hover:text-rose-400 underline disabled:opacity-40"
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-3">
-                                <span className="text-emerald-400 text-sm flex items-center gap-1">
-                                  <CheckCircle2
-                                    size={16}
-                                  />
-                                  Marcada
-                                </span>
+                          {jaPassou ? (
 
-                                <span className="text-xs text-amber-400">
-                                  Menos de 12h
-                                </span>
-                              </div>
-                            )
-                          ) : jaPassou ? (
-                            <span className="px-4 py-2 rounded-md text-sm font-medium bg-zinc-800 text-zinc-600">
+                            <span className="text-xs font-medium px-2 py-1 rounded-md bg-amber-500/15 text-amber-400">
                               Já passou
                             </span>
+
                           ) : (
-                            <button
-                              onClick={() =>
-                                book(t)
-                              }
-                              disabled={
-                                cheio ||
-                                busy
-                              }
-                              className={`px-4 py-2 rounded-md text-sm font-medium ${
-                                cheio ||
-                                busy
-                                  ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
-                                  : "bg-lime-400 text-zinc-950 hover:bg-lime-300"
+
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded-md ${
+                                cheio
+                                  ? "bg-rose-500/15 text-rose-400"
+                                  : "bg-emerald-500/15 text-emerald-400"
                               }`}
                             >
                               {cheio
                                 ? "Turma completa"
-                                : "Marcar"}
-                            </button>
+                                : "Vaga disponível"}
+                            </span>
+
                           )}
+
                         </div>
-                      );
-                    }
-                  )}
+
+                        {minhaMarcacao ? (
+
+                          jaPassou ? (
+
+                            <span className="text-sky-400 text-sm flex items-center gap-1">
+                              <CheckCircle2 size={16} />
+                              Aula concluída
+                            </span>
+
+                          ) : (
+
+                            <div className="flex items-center gap-3">
+
+                              <span className="text-emerald-400 text-sm flex items-center gap-1">
+                                <CheckCircle2 size={16} />
+                                Marcada
+                              </span>
+
+                              <button
+                                disabled={busy}
+                                onClick={() =>
+                                  cancel(
+                                    minhaMarcacao.booking_id
+                                  )
+                                }
+                                className="text-xs text-zinc-500 hover:text-rose-400 underline"
+                              >
+                                Cancelar
+                              </button>
+
+                            </div>
+
+                          )
+
+                        ) : jaPassou ? (
+
+                          <span className="px-4 py-2 rounded-md text-sm font-medium bg-zinc-800 text-zinc-600">
+                            Já passou
+                          </span>
+
+                        ) : (
+
+                          <button
+                            onClick={() =>
+                              book(t)
+                            }
+                            disabled={
+                              cheio ||
+                              busy
+                            }
+                            className={`px-4 py-2 rounded-md text-sm font-medium ${
+                              cheio || busy
+                                ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                                : "bg-lime-400 text-zinc-950 hover:bg-lime-300"
+                            }`}
+                          >
+                            {cheio
+                              ? "Turma completa"
+                              : "Marcar"}
+                          </button>
+
+                        )}
+
+                      </div>
+                    );
+                  })}
+
               </>
             )}
+
           </div>
+
         </div>
+
       </div>
+
     </main>
   );
 }
