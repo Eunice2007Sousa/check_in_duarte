@@ -34,7 +34,10 @@ const MESES = [
 ];
 
 const CODE_LEN = 4;
-const PACK_OPTIONS = [4, 8, 12];
+
+// Antes controlava-se por "pack" (4/8/12 treinos).
+// Agora controla-se por frequência semanal (1, 2 ou 3 treinos/semana).
+const FREQUENCY_OPTIONS = [1, 2, 3];
 
 /* ============================================================
    DATE / TIME
@@ -54,6 +57,10 @@ function addMonths(d, n) {
   return r;
 }
 
+function endOfMonth(d) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+
 function startOfDay(d) {
   const r = new Date(d);
   r.setHours(0, 0, 0, 0);
@@ -66,6 +73,16 @@ function sameDay(a, b) {
 
 function hhmm(hora) {
   return (hora || "").slice(0, 5);
+}
+
+// Aceita tanto "YYYY-MM-DD" (string vinda do Postgres) como Date.
+function formatDiaMes(value) {
+  if (!value) return "";
+
+  const s = typeof value === "string" ? value : isoDate(value);
+  const [, m, d] = s.split("-");
+
+  return `${d}/${m}`;
 }
 
 function lisbonNow() {
@@ -110,13 +127,15 @@ function classDateTime(dateIso, hora) {
 const ERROR_MESSAGES = {
   CREDENCIAIS_INVALIDAS: "ID ou PIN incorretos.",
   TURMA_INEXISTENTE: "Esta turma já não existe.",
+  ATLETA_INEXISTENTE: "Este atleta já não existe.",
   AULA_JA_PASSOU: "Esta aula já aconteceu — não é possível marcar.",
-  PACK_ESGOTADO: "Não tens treinos disponíveis no teu pack. Fala com o Duarte.",
   JA_INSCRITO: "Já estás inscrito nesta aula.",
   TURMA_CHEIA: "Esta aula já está com as vagas todas preenchidas.",
   MARCACAO_INEXISTENTE: "Não foi possível encontrar esta marcação.",
-  MENOS_DE_1H: "Já não é possível desmarcar: falta menos de 1h para a aula.",
-  MENOS_DE_12H: "Já não é possível desmarcar: falta menos de 1h para a aula.",
+  CANCELAMENTO_TARDIO: "Já não é possível desmarcar: falta menos de 1h para a aula.",
+  APENAS_MES_ATUAL: "Só podes marcar ou desmarcar aulas do mês atual.",
+  LIMITE_SEMANAL_ATINGIDO: "Já atingiste o número de treinos permitidos esta semana.",
+  FREQUENCIA_INVALIDA: "A frequência deve ser 1, 2 ou 3 treinos por semana.",
   PIN_INVALIDO: "PIN incorreto.",
   CODIGO_INVALIDO: "O código deve ter 4 dígitos.",
   CODIGO_JA_USADO: "Esse código já está a ser usado por outro atleta.",
@@ -1136,11 +1155,11 @@ function OwnerAtletas({ ownerPin }) {
   const [proximoId, setProximoId] = useState(null);
 
   const [newName, setNewName] = useState("");
-  const [newPack, setNewPack] =
-    useState(PACK_OPTIONS[0]);
+  const [newFrequencia, setNewFrequencia] =
+    useState(FREQUENCY_OPTIONS[0]);
 
   const [error, setError] = useState("");
-  const [assigning, setAssigning] =
+  const [editingFreq, setEditingFreq] =
     useState(null);
 
   const [revealed, setRevealed] =
@@ -1190,7 +1209,7 @@ function OwnerAtletas({ ownerPin }) {
         {
           p_owner_pin: ownerPin,
           p_nome: newName.trim(),
-          p_pack_total: newPack
+          p_frequencia: newFrequencia
         }
       );
 
@@ -1224,18 +1243,20 @@ function OwnerAtletas({ ownerPin }) {
     carregar();
   };
 
-  const assignPack = async (
+  // Substitui o antigo "assignPack": agora altera a
+  // frequência semanal do atleta para o mês atual.
+  const changeFrequencia = async (
     id,
-    total
+    frequencia
   ) => {
 
     const { error } =
       await supabase.rpc(
-        "fn_atribuir_pack",
+        "fn_alterar_frequencia_atleta",
         {
           p_owner_pin: ownerPin,
           p_atleta_id: id,
-          p_pack_total: total
+          p_frequencia: frequencia
         }
       );
 
@@ -1245,7 +1266,7 @@ function OwnerAtletas({ ownerPin }) {
       );
     }
 
-    setAssigning(null);
+    setEditingFreq(null);
     carregar();
   };
 
@@ -1264,7 +1285,10 @@ function OwnerAtletas({ ownerPin }) {
             ? ` (o próximo será #${proximoId})`
             : ""}.
           O atleta irá escolher o seu próprio código
-          de 4 dígitos na primeira utilização.
+          de 4 dígitos na primeira utilização. A
+          frequência escolhida abaixo aplica-se ao
+          mês atual e será herdada automaticamente
+          nos meses seguintes até seres tu a alterá-la.
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -1279,17 +1303,17 @@ function OwnerAtletas({ ownerPin }) {
           />
 
           <select
-            value={newPack}
+            value={newFrequencia}
             onChange={(e) =>
-              setNewPack(
+              setNewFrequencia(
                 Number(e.target.value)
               )
             }
-            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-40"
+            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-48"
           >
-            {PACK_OPTIONS.map((p) => (
-              <option key={p} value={p}>
-                {p} treinos
+            {FREQUENCY_OPTIONS.map((f) => (
+              <option key={f} value={f}>
+                {f} treino{f > 1 ? "s" : ""}/semana
               </option>
             ))}
           </select>
@@ -1314,23 +1338,8 @@ function OwnerAtletas({ ownerPin }) {
 
       <div className="divide-y divide-zinc-800 border border-zinc-800 rounded-xl overflow-hidden">
 
-        {atletas.map((a) => {
+        {atletas.map((a) => (
 
-          const restantes =
-            a.pack_total - a.pack_usado;
-
-          const pct =
-            Math.max(
-              0,
-              Math.min(
-                100,
-                (restantes /
-                  a.pack_total) *
-                  100
-              )
-            );
-
-          return (
             <div
               key={a.id}
               className="px-4 py-3 bg-zinc-900 flex items-center justify-between gap-4 flex-wrap"
@@ -1351,23 +1360,11 @@ function OwnerAtletas({ ownerPin }) {
                 </div>
 
                 <div className="text-xs text-zinc-500">
-                  {restantes} de{" "}
-                  {a.pack_total} treinos restantes
-                </div>
-
-                <div className="w-32 h-1.5 bg-zinc-800 rounded-full mt-1 overflow-hidden">
-
-                  <div
-                    className={`h-full ${
-                      restantes === 0
-                        ? "bg-rose-500"
-                        : "bg-lime-400"
-                    }`}
-                    style={{
-                      width: `${pct}%`
-                    }}
-                  />
-
+                  Frequência atual:{" "}
+                  <span className="text-lime-400">
+                    {a.frequencia_atual} treino
+                    {a.frequencia_atual > 1 ? "s" : ""}/semana
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2 mt-2">
@@ -1405,25 +1402,25 @@ function OwnerAtletas({ ownerPin }) {
 
               <div className="flex items-center gap-2">
 
-                {assigning === a.id ? (
+                {editingFreq === a.id ? (
 
                   <div className="flex items-center gap-2">
 
-                    {PACK_OPTIONS.map((p) => (
+                    {FREQUENCY_OPTIONS.map((f) => (
                       <button
-                        key={p}
+                        key={f}
                         onClick={() =>
-                          assignPack(a.id, p)
+                          changeFrequencia(a.id, f)
                         }
                         className="px-3 py-1.5 rounded-md border border-lime-400 text-lime-400 text-xs hover:bg-lime-400 hover:text-zinc-950"
                       >
-                        {p}
+                        {f}
                       </button>
                     ))}
 
                     <button
                       onClick={() =>
-                        setAssigning(null)
+                        setEditingFreq(null)
                       }
                       className="text-zinc-500 text-xs px-2"
                     >
@@ -1436,12 +1433,12 @@ function OwnerAtletas({ ownerPin }) {
 
                   <button
                     onClick={() =>
-                      setAssigning(a.id)
+                      setEditingFreq(a.id)
                     }
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-800 text-zinc-400 text-xs hover:text-lime-400 hover:border-lime-400/40"
                   >
                     <PackageCheck size={14} />
-                    Atribuir novo pack
+                    Alterar frequência
                   </button>
 
                 )}
@@ -1458,8 +1455,7 @@ function OwnerAtletas({ ownerPin }) {
               </div>
 
             </div>
-          );
-        })}
+          ))}
 
       </div>
 
@@ -1582,8 +1578,13 @@ const ACTION_LABELS = {
   },
 
   tentativa_bloqueada: {
-    label: "Tentativa de desmarcação bloqueada",
+    label: "Tentativa bloqueada",
     color: "bg-amber-500/15 text-amber-400"
+  },
+
+  alteracao_frequencia: {
+    label: "Frequência alterada",
+    color: "bg-sky-500/15 text-sky-400"
   }
 };
 
@@ -1659,12 +1660,6 @@ function OwnerAuditLog({ ownerPin }) {
       (a) => a.id === atletaId
     );
 
-  const hoje =
-    startOfDay(lisbonNow());
-
-  const desde =
-    addMonths(hoje, -1);
-
   return (
     <div className="space-y-5">
 
@@ -1675,7 +1670,7 @@ function OwnerAuditLog({ ownerPin }) {
         </div>
 
         <div className="text-xs text-zinc-500">
-          Mostra marcações, desmarcações e tentativas bloqueadas no último mês.
+          Mostra marcações, desmarcações, tentativas bloqueadas e alterações de frequência no último mês.
         </div>
 
         <select
@@ -1923,11 +1918,15 @@ function AtletaIdEntry({ onFound }) {
       if (data && data.length > 0) {
 
         /*
-          A função agora deve devolver
-          também codigo_definido.
+          A função devolve numero_id, nome
+          e codigo_definido.
         */
 
-        onFound(data[0]);
+        onFound({
+          ...data[0],
+          tem_codigo:
+            data[0].codigo_definido
+        });
 
       } else {
 
@@ -2378,10 +2377,14 @@ function ChangeAthleteCode({
 
     try {
 
+      // NOTA: o nome desta função tinha de corresponder
+      // exatamente ao alias criado no SQL
+      // ("fn_alterar_codigo_atleta_proprio"), caso
+      // contrário a chamada falhava com "function not found".
       const {
   error
 } = await supabase.rpc(
-  "fn_atleta_alterar_codigo",
+  "fn_alterar_codigo_atleta_proprio",
   {
     p_numero_id:
       session.numero_id,
@@ -2529,8 +2532,11 @@ function AtletaDashboard({
   const today =
     startOfDay(lisbonNow());
 
+  // O atleta só pode marcar/desmarcar no mês atual,
+  // por isso o calendário de marcação não avança
+  // para além do último dia do mês corrente.
   const maxBookingDate =
-    addMonths(today, 1);
+    endOfMonth(today);
 
   const [date, setDate] =
     useState(today);
@@ -2561,6 +2567,16 @@ function AtletaDashboard({
 
   const [showChangeCode, setShowChangeCode] =
     useState(false);
+
+  // Resumo da semana "real" (a de hoje), mostrado
+  // no cartão de perfil.
+  const [resumoSemanaAtual, setResumoSemanaAtual] =
+    useState(null);
+
+  // Resumo da semana correspondente ao dia
+  // selecionado no calendário de marcação.
+  const [resumoSemanaSelecionada, setResumoSemanaSelecionada] =
+    useState(null);
 
   const feedbackTimer =
     useRef(null);
@@ -2593,6 +2609,29 @@ function AtletaDashboard({
         4000
       );
   };
+
+  const fetchResumoSemana = useCallback(
+    async (targetDate) => {
+
+      const { data } =
+        await supabase.rpc(
+          "fn_resumo_semana_atleta",
+          {
+            p_numero_id:
+              session.numero_id,
+            p_codigo:
+              session.codigo,
+            p_data:
+              isoDate(targetDate)
+          }
+        );
+
+      return data && data.length > 0
+        ? data[0]
+        : null;
+    },
+    [session.numero_id, session.codigo]
+  );
 
   const carregarTudo =
     useCallback(async () => {
@@ -2670,6 +2709,24 @@ function AtletaDashboard({
   useEffect(() => {
     carregarTudo();
   }, [carregarTudo]);
+
+  // Resumo da semana de hoje — para o cartão de perfil.
+  useEffect(() => {
+
+    fetchResumoSemana(today).then(
+      setResumoSemanaAtual
+    );
+
+  }, [fetchResumoSemana]);
+
+  // Resumo da semana do dia selecionado no calendário.
+  useEffect(() => {
+
+    fetchResumoSemana(date).then(
+      setResumoSemanaSelecionada
+    );
+
+  }, [iso, fetchResumoSemana]);
 
   const carregarOcupacaoDoDia =
     useCallback(
@@ -2778,6 +2835,18 @@ function AtletaDashboard({
       []
     );
 
+  const refreshResumos = async () => {
+
+    const [atual, selecionada] =
+      await Promise.all([
+        fetchResumoSemana(today),
+        fetchResumoSemana(date)
+      ]);
+
+    setResumoSemanaAtual(atual);
+    setResumoSemanaSelecionada(selecionada);
+  };
+
   const book = async (
     template
   ) => {
@@ -2817,6 +2886,7 @@ function AtletaDashboard({
     );
 
     await carregarTudo();
+    await refreshResumos();
 
     await carregarOcupacaoDoDia(
       date,
@@ -2884,6 +2954,7 @@ function AtletaDashboard({
     );
 
     await carregarTudo();
+    await refreshResumos();
 
     await carregarOcupacaoDoDia(
       date,
@@ -2941,20 +3012,21 @@ function AtletaDashboard({
           )
       );
 
-  const restantes =
-    session.pack_total -
-    session.pack_usado;
-
-  const pct =
-    Math.max(
-      0,
-      Math.min(
-        100,
-        (restantes /
-          session.pack_total) *
-          100
+  const pctSemana = resumoSemanaAtual
+    ? Math.max(
+        0,
+        Math.min(
+          100,
+          (resumoSemanaAtual.usados /
+            resumoSemanaAtual.frequencia) *
+            100
+        )
       )
-    );
+    : 0;
+
+  const semanaSelecionadaCheia =
+    !!resumoSemanaSelecionada &&
+    resumoSemanaSelecionada.disponiveis <= 0;
 
   return (
     <main className="px-6 py-8 max-w-3xl w-full mx-auto space-y-6">
@@ -2970,20 +3042,33 @@ function AtletaDashboard({
           </div>
 
           <div className="text-sm text-zinc-500">
-            {restantes} de{" "}
-            {session.pack_total} treinos restantes no pack
+            {resumoSemanaAtual ? (
+              <>
+                Esta semana ({formatDiaMes(resumoSemanaAtual.semana_inicio)} –{" "}
+                {formatDiaMes(resumoSemanaAtual.semana_fim)}):{" "}
+                {resumoSemanaAtual.usados} de{" "}
+                {resumoSemanaAtual.frequencia} treino
+                {resumoSemanaAtual.frequencia > 1 ? "s" : ""} usados
+                {" — "}
+                {resumoSemanaAtual.disponiveis} disponível
+                {resumoSemanaAtual.disponiveis === 1 ? "" : "eis"}
+              </>
+            ) : (
+              "A carregar frequência…"
+            )}
           </div>
 
           <div className="w-48 h-1.5 bg-zinc-800 rounded-full mt-1 overflow-hidden">
 
             <div
               className={`h-full ${
-                restantes === 0
+                resumoSemanaAtual &&
+                resumoSemanaAtual.disponiveis === 0
                   ? "bg-rose-500"
                   : "bg-lime-400"
               }`}
               style={{
-                width: `${pct}%`
+                width: `${pctSemana}%`
               }}
             />
 
@@ -3144,10 +3229,11 @@ function AtletaDashboard({
         </div>
 
         <div className="text-xs text-zinc-500 mb-3">
-          Podes marcar entre hoje e{" "}
-          {maxBookingDate.getDate()} de{" "}
-          {MESES[maxBookingDate.getMonth()]}.
+          Só podes marcar e desmarcar aulas do mês atual
+          (até {maxBookingDate.getDate()} de{" "}
+          {MESES[maxBookingDate.getMonth()]}).
           Podes desmarcar até 1 hora antes da aula.
+          Meses anteriores ficam disponíveis apenas para consulta.
         </div>
 
         <div className="grid md:grid-cols-[minmax(0,380px)_1fr] gap-5 items-start">
@@ -3267,6 +3353,27 @@ function AtletaDashboard({
 
               <>
 
+                {resumoSemanaSelecionada && (
+                  <div
+                    className={`text-xs rounded-lg px-3 py-2 border ${
+                      semanaSelecionadaCheia
+                        ? "border-rose-500/40 bg-rose-500/10 text-rose-400"
+                        : "border-zinc-800 bg-zinc-900 text-zinc-400"
+                    }`}
+                  >
+                    Semana de{" "}
+                    {formatDiaMes(resumoSemanaSelecionada.semana_inicio)} a{" "}
+                    {formatDiaMes(resumoSemanaSelecionada.semana_fim)}:{" "}
+                    {resumoSemanaSelecionada.usados}/
+                    {resumoSemanaSelecionada.frequencia} treinos usados
+                    {semanaSelecionadaCheia
+                      ? " — limite semanal atingido."
+                      : ` — ${resumoSemanaSelecionada.disponiveis} disponível${
+                          resumoSemanaSelecionada.disponiveis === 1 ? "" : "eis"
+                        }.`}
+                  </div>
+                )}
+
                 {templatesHoje.length === 0 && (
                   <div className="text-zinc-500 text-sm bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                     Não há turmas disponíveis à{" "}
@@ -3304,11 +3411,15 @@ function AtletaDashboard({
                         t.hora
                       ) <= lisbonNow();
 
+                    const bloqueadoPelaSemana =
+                      !minhaMarcacao &&
+                      semanaSelecionadaCheia;
+
                     return (
                       <div
                         key={t.id}
                         className={`bg-zinc-900 border rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap ${
-                          cheio
+                          cheio || bloqueadoPelaSemana
                             ? "border-rose-500/40"
                             : "border-zinc-800"
                         }`}
@@ -3330,13 +3441,15 @@ function AtletaDashboard({
 
                             <span
                               className={`text-xs font-medium px-2 py-1 rounded-md ${
-                                cheio
+                                cheio || bloqueadoPelaSemana
                                   ? "bg-rose-500/15 text-rose-400"
                                   : "bg-emerald-500/15 text-emerald-400"
                               }`}
                             >
                               {cheio
                                 ? "Turma completa"
+                                : bloqueadoPelaSemana
+                                ? "Limite semanal atingido"
                                 : "Vaga disponível"}
                             </span>
 
@@ -3392,16 +3505,19 @@ function AtletaDashboard({
                             }
                             disabled={
                               cheio ||
+                              bloqueadoPelaSemana ||
                               busy
                             }
                             className={`px-4 py-2 rounded-md text-sm font-medium ${
-                              cheio || busy
+                              cheio || bloqueadoPelaSemana || busy
                                 ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
                                 : "bg-lime-400 text-zinc-950 hover:bg-lime-300"
                             }`}
                           >
                             {cheio
                               ? "Turma completa"
+                              : bloqueadoPelaSemana
+                              ? "Sem vagas esta semana"
                               : "Marcar"}
                           </button>
 
