@@ -16,7 +16,9 @@ const DIAS = [
   "Sábado"
 ];
 
-const DIAS_ABBR = ["D", "S", "T", "Q", "Q", "S", "S"];
+// Segunda -> Domingo (alinhado com fn_inicio_semana no SQL,
+// que também considera a semana Segunda -> Domingo).
+const DIAS_ABBR = ["S", "T", "Q", "Q", "S", "S", "D"];
 
 const MESES = [
   "Janeiro",
@@ -423,7 +425,12 @@ function buildMonthCells(viewMonth) {
   const year = viewMonth.getFullYear();
   const month = viewMonth.getMonth();
 
-  const firstWeekday = new Date(year, month, 1).getDay();
+  // Date.getDay() devolve 0=Domingo..6=Sábado. Como a semana
+  // aqui é Segunda -> Domingo (igual ao fn_inicio_semana do
+  // SQL), convertemos para 0=Segunda..6=Domingo antes de
+  // calcular quantas células vazias entram antes do dia 1.
+  const jsFirstDay = new Date(year, month, 1).getDay();
+  const firstWeekday = (jsFirstDay + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells = [];
@@ -1165,142 +1172,65 @@ function OwnerAtletas({ ownerPin }) {
   const [revealed, setRevealed] =
     useState({});
 
-  const [loading, setLoading] =
-    useState(false);
-
-  /* ==========================================================
-     CARREGAR ATLETAS
-  ========================================================== */
-
   const carregar = useCallback(
     async () => {
 
-      setError("");
-
       const [
-        { data: lista, error: listaError },
-        { data: prox, error: proxError }
+        { data: lista },
+        { data: prox }
       ] = await Promise.all([
-
         supabase.rpc(
           "fn_listar_atletas",
           {
             p_owner_pin: ownerPin
           }
         ),
-
         supabase.rpc(
           "fn_proximo_numero_id"
         )
-
       ]);
-
-      if (listaError) {
-        setError(
-          friendlyError(listaError)
-        );
-        return;
-      }
-
-      if (proxError) {
-        setError(
-          friendlyError(proxError)
-        );
-        return;
-      }
 
       setAtletas(lista || []);
       setProximoId(prox ?? null);
-
     },
     [ownerPin]
   );
-
 
   useEffect(() => {
     carregar();
   }, [carregar]);
 
-
-  /* ==========================================================
-     ADICIONAR ATLETA
-  ========================================================== */
-
   const addAtleta = async () => {
 
     setError("");
 
-    const nome = newName.trim();
-
-    if (!nome) {
-      setError(
+    if (!newName.trim()) {
+      return setError(
         "Indica o nome do atleta."
       );
-      return;
     }
-
-    if (
-      !FREQUENCY_OPTIONS.includes(
-        Number(newFrequencia)
-      )
-    ) {
-      setError(
-        "Seleciona uma frequência válida."
-      );
-      return;
-    }
-
-    setLoading(true);
 
     const { error } =
       await supabase.rpc(
         "fn_criar_atleta",
         {
           p_owner_pin: ownerPin,
-          p_nome: nome,
-          p_frequencia: Number(newFrequencia)
+          p_nome: newName.trim(),
+          p_frequencia: newFrequencia
         }
       );
 
-    setLoading(false);
-
     if (error) {
-      setError(
+      return setError(
         friendlyError(error)
       );
-      return;
     }
 
     setNewName("");
-
-    await carregar();
-
+    carregar();
   };
 
-
-  /* ==========================================================
-     REMOVER ATLETA
-  ========================================================== */
-
   const removeAtleta = async (id) => {
-
-    setError("");
-
-    const atleta =
-      atletas.find(
-        (a) => a.id === id
-      );
-
-    const confirmar =
-      window.confirm(
-        `Tens a certeza que queres remover o atleta "${atleta?.nome || ""}"?`
-      );
-
-    if (!confirmar) {
-      return;
-    }
-
-    setLoading(true);
 
     const { error } =
       await supabase.rpc(
@@ -1311,64 +1241,21 @@ function OwnerAtletas({ ownerPin }) {
         }
       );
 
-    setLoading(false);
-
     if (error) {
-      setError(
+      return setError(
         friendlyError(error)
       );
-      return;
     }
 
-    setRevealed((r) => {
-
-      const novo = {
-        ...r
-      };
-
-      delete novo[id];
-
-      return novo;
-
-    });
-
-    await carregar();
-
+    carregar();
   };
 
-
-  /* ==========================================================
-     ALTERAR FREQUÊNCIA
-     
-     IMPORTANTE:
-     A função SQL altera apenas a frequência do MÊS ATUAL.
-     
-     Os meses seguintes herdam automaticamente essa frequência
-     através de fn_obter_frequencia_atleta().
-  ========================================================== */
-
+  // Substitui o antigo "assignPack": agora altera a
+  // frequência semanal do atleta para o mês atual.
   const changeFrequencia = async (
     id,
     frequencia
   ) => {
-
-    setError("");
-
-    const frequenciaNumerica =
-      Number(frequencia);
-
-    if (
-      !FREQUENCY_OPTIONS.includes(
-        frequenciaNumerica
-      )
-    ) {
-      setError(
-        "Frequência inválida."
-      );
-      return;
-    }
-
-    setLoading(true);
 
     const { error } =
       await supabase.rpc(
@@ -1376,37 +1263,22 @@ function OwnerAtletas({ ownerPin }) {
         {
           p_owner_pin: ownerPin,
           p_atleta_id: id,
-          p_frequencia: frequenciaNumerica
+          p_frequencia: frequencia
         }
       );
 
-    setLoading(false);
-
     if (error) {
-      setError(
+      return setError(
         friendlyError(error)
       );
-      return;
     }
 
     setEditingFreq(null);
-
-    await carregar();
-
+    carregar();
   };
-
-
-  /* ==========================================================
-     INTERFACE
-  ========================================================== */
 
   return (
     <div className="space-y-6">
-
-
-      {/* ======================================================
-         ADICIONAR ATLETA
-      ====================================================== */}
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
 
@@ -1414,66 +1286,28 @@ function OwnerAtletas({ ownerPin }) {
           Adicionar atleta
         </div>
 
-
-        <div className="text-xs text-zinc-500 leading-relaxed">
-
+        <div className="text-xs text-zinc-500">
           O ID é atribuído automaticamente
           {proximoId
             ? ` (o próximo será #${proximoId})`
-            : ""
-          }.
-
-          O atleta irá escolher o seu próprio
-          código de 4 dígitos na primeira
-          utilização.
-
-          A frequência escolhida aplica-se
-          ao mês atual e será herdada
-          automaticamente nos meses seguintes,
-          até ser alterada pelo Duarte.
-
+            : ""}.
+          O atleta irá escolher o seu próprio código
+          de 4 dígitos na primeira utilização. A
+          frequência escolhida abaixo aplica-se ao
+          mês atual e será herdada automaticamente
+          nos meses seguintes até seres tu a alterá-la.
         </div>
 
-
         <div className="flex flex-col sm:flex-row gap-3">
-
-
-          {/* NOME */}
 
           <input
             value={newName}
             onChange={(e) =>
-              setNewName(
-                e.target.value
-              )
+              setNewName(e.target.value)
             }
-            onKeyDown={(e) => {
-
-              if (
-                e.key === "Enter" &&
-                !loading
-              ) {
-                addAtleta();
-              }
-
-            }}
             placeholder="Nome do atleta"
-            disabled={loading}
-            className="
-              bg-zinc-950
-              border border-zinc-800
-              rounded-md
-              px-3 py-2
-              text-sm
-              w-full
-              focus:outline-none
-              focus:border-lime-400/50
-              disabled:opacity-50
-            "
+            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full"
           />
-
-
-          {/* FREQUÊNCIA */}
 
           <select
             value={newFrequencia}
@@ -1482,346 +1316,120 @@ function OwnerAtletas({ ownerPin }) {
                 Number(e.target.value)
               )
             }
-            disabled={loading}
-            className="
-              bg-zinc-950
-              border border-zinc-800
-              rounded-md
-              px-3 py-2
-              text-sm
-              w-full
-              sm:w-48
-              focus:outline-none
-              focus:border-lime-400/50
-              disabled:opacity-50
-            "
+            className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full sm:w-48"
           >
-
-            {FREQUENCY_OPTIONS.map(
-              (f) => (
-
-                <option
-                  key={f}
-                  value={f}
-                >
-                  {f} treino
-                  {f > 1 ? "s" : ""}
-                  /semana
-                </option>
-
-              )
-            )}
-
+            {FREQUENCY_OPTIONS.map((f) => (
+              <option key={f} value={f}>
+                {f} treino{f > 1 ? "s" : ""}/semana
+              </option>
+            ))}
           </select>
-
-
-          {/* ADICIONAR */}
 
           <button
             onClick={addAtleta}
-            disabled={loading}
-            className="
-              flex
-              items-center
-              justify-center
-              gap-2
-              bg-lime-400
-              text-zinc-950
-              rounded-md
-              px-4 py-2
-              text-sm
-              font-medium
-              hover:bg-lime-300
-              whitespace-nowrap
-              disabled:opacity-50
-              disabled:cursor-not-allowed
-            "
+            className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 whitespace-nowrap"
           >
-
             <Plus size={16} />
-
-            {loading
-              ? "A guardar..."
-              : "Adicionar"
-            }
-
+            Adicionar
           </button>
 
         </div>
 
-
-        {/* ERRO */}
-
         {error && (
-
           <div className="text-rose-400 text-sm">
-
             {error}
-
           </div>
-
         )}
 
       </div>
 
+      <div className="divide-y divide-zinc-800 border border-zinc-800 rounded-xl overflow-hidden">
 
-
-      {/* ======================================================
-         LISTA DE ATLETAS
-      ====================================================== */}
-
-      <div className="
-        divide-y
-        divide-zinc-800
-        border
-        border-zinc-800
-        rounded-xl
-        overflow-hidden
-      ">
-
-
-        {atletas.length === 0 ? (
-
-          <div className="
-            px-4
-            py-8
-            bg-zinc-900
-            text-center
-            text-sm
-            text-zinc-500
-          ">
-            Ainda não existem atletas.
-          </div>
-
-        ) : (
-
-          atletas.map((a) => (
+        {atletas.map((a) => (
 
             <div
               key={a.id}
-              className="
-                px-4
-                py-3
-                bg-zinc-900
-                flex
-                items-center
-                justify-between
-                gap-4
-                flex-wrap
-              "
+              className="px-4 py-3 bg-zinc-900 flex items-center justify-between gap-4 flex-wrap"
             >
-
-
-              {/* ==================================================
-                 INFORMAÇÃO DO ATLETA
-              ================================================== */}
 
               <div>
 
-                {/* NOME + ID */}
-
-                <div className="
-                  flex
-                  items-center
-                  gap-2
-                ">
+                <div className="flex items-center gap-2">
 
                   <span className="text-zinc-200">
                     {a.nome}
                   </span>
 
-                  <span className="
-                    font-mono-id
-                    text-zinc-500
-                    text-xs
-                  ">
+                  <span className="font-mono-id text-zinc-500 text-xs">
                     #{a.numero_id}
                   </span>
 
                 </div>
 
-
-                {/* FREQUÊNCIA */}
-
-                <div className="
-                  text-xs
-                  text-zinc-500
-                ">
-
+                <div className="text-xs text-zinc-500">
                   Frequência atual:{" "}
-
-                  <span className="
-                    text-lime-400
-                  ">
-
-                    {a.frequencia_atual}
-
-                    {" "}
-                    
-                    treino
-                    {a.frequencia_atual > 1
-                      ? "s"
-                      : ""
-                    }
-
-                    /semana
-
+                  <span className="text-lime-400">
+                    {a.frequencia_atual} treino
+                    {a.frequencia_atual > 1 ? "s" : ""}/semana
                   </span>
-
                 </div>
 
+                <div className="flex items-center gap-2 mt-2">
 
-                {/* CÓDIGO */}
-
-                <div className="
-                  flex
-                  items-center
-                  gap-2
-                  mt-2
-                ">
-
-                  <span className="
-                    font-mono-id
-                    text-xs
-                    text-zinc-400
-                    tracking-widest
-                  ">
-
+                  <span className="font-mono-id text-xs text-zinc-400 tracking-widest">
                     {a.codigo
-
-                      ? (
-                          revealed[a.id]
-                            ? a.codigo
-                            : "••••"
-                        )
-
-                      : "Ainda não definido"
-
-                    }
-
+                      ? revealed[a.id]
+                        ? a.codigo
+                        : "••••"
+                      : "Ainda não definido"}
                   </span>
 
-
-                  {/* MOSTRAR / ESCONDER */}
-
                   {a.codigo && (
-
                     <button
-                      type="button"
                       onClick={() =>
-                        setRevealed(
-                          (r) => ({
-                            ...r,
-                            [a.id]:
-                              !r[a.id]
-                          })
-                        )
+                        setRevealed((r) => ({
+                          ...r,
+                          [a.id]:
+                            !r[a.id]
+                        }))
                       }
-                      className="
-                        text-zinc-600
-                        hover:text-lime-400
-                        transition-colors
-                      "
-                      title={
-                        revealed[a.id]
-                          ? "Esconder código"
-                          : "Mostrar código"
-                      }
+                      className="text-zinc-600 hover:text-lime-400"
                     >
-
                       {revealed[a.id] ? (
-
                         <EyeOff size={14} />
-
                       ) : (
-
                         <Eye size={14} />
-
                       )}
-
                     </button>
-
                   )}
 
                 </div>
 
               </div>
 
-
-
-              {/* ==================================================
-                 AÇÕES
-              ================================================== */}
-
-              <div className="
-                flex
-                items-center
-                gap-2
-                flex-wrap
-              ">
-
+              <div className="flex items-center gap-2">
 
                 {editingFreq === a.id ? (
 
-                  /* ==============================================
-                     ESCOLHER NOVA FREQUÊNCIA
-                  ============================================== */
+                  <div className="flex items-center gap-2">
 
-                  <div className="
-                    flex
-                    items-center
-                    gap-2
-                  ">
-
-
-                    {FREQUENCY_OPTIONS.map(
-                      (f) => (
-
-                        <button
-                          key={f}
-                          type="button"
-                          disabled={loading}
-                          onClick={() =>
-                            changeFrequencia(
-                              a.id,
-                              f
-                            )
-                          }
-                          className="
-                            px-3
-                            py-1.5
-                            rounded-md
-                            border
-                            border-lime-400
-                            text-lime-400
-                            text-xs
-                            hover:bg-lime-400
-                            hover:text-zinc-950
-                            disabled:opacity-50
-                          "
-                        >
-
-                          {f}
-
-                        </button>
-
-                      )
-                    )}
-
+                    {FREQUENCY_OPTIONS.map((f) => (
+                      <button
+                        key={f}
+                        onClick={() =>
+                          changeFrequencia(a.id, f)
+                        }
+                        className="px-3 py-1.5 rounded-md border border-lime-400 text-lime-400 text-xs hover:bg-lime-400 hover:text-zinc-950"
+                      >
+                        {f}
+                      </button>
+                    ))}
 
                     <button
-                      type="button"
                       onClick={() =>
                         setEditingFreq(null)
                       }
-                      disabled={loading}
-                      className="
-                        text-zinc-500
-                        text-xs
-                        px-2
-                        hover:text-zinc-300
-                        disabled:opacity-50
-                      "
+                      className="text-zinc-500 text-xs px-2"
                     >
                       cancelar
                     </button>
@@ -1830,73 +1438,31 @@ function OwnerAtletas({ ownerPin }) {
 
                 ) : (
 
-                  /* ==============================================
-                     BOTÃO ALTERAR FREQUÊNCIA
-                  ============================================== */
-
                   <button
-                    type="button"
                     onClick={() =>
                       setEditingFreq(a.id)
                     }
-                    disabled={loading}
-                    className="
-                      flex
-                      items-center
-                      gap-1.5
-                      px-3
-                      py-1.5
-                      rounded-md
-                      border
-                      border-zinc-800
-                      text-zinc-400
-                      text-xs
-                      hover:text-lime-400
-                      hover:border-lime-400/40
-                      disabled:opacity-50
-                    "
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-800 text-zinc-400 text-xs hover:text-lime-400 hover:border-lime-400/40"
                   >
-
                     <PackageCheck size={14} />
-
                     Alterar frequência
-
                   </button>
 
                 )}
 
-
-                {/* ==============================================
-                   REMOVER
-                ============================================== */}
-
                 <button
-                  type="button"
                   onClick={() =>
                     removeAtleta(a.id)
                   }
-                  disabled={loading}
-                  className="
-                    text-zinc-600
-                    hover:text-rose-400
-                    transition-colors
-                    disabled:opacity-30
-                    disabled:cursor-not-allowed
-                  "
-                  title="Remover atleta"
+                  className="text-zinc-600 hover:text-rose-400"
                 >
-
                   <Trash2 size={18} />
-
                 </button>
 
               </div>
 
             </div>
-
-          ))
-
-        )}
+          ))}
 
       </div>
 
