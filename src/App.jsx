@@ -204,7 +204,7 @@ export default function App() {
         <div className="flex items-center gap-2 text-lime-400">
           <Dumbbell size={22} />
           <span className="font-display text-2xl tracking-wide">
-            CHECK-IN
+            TURN ON FITNESS
           </span>
         </div>
 
