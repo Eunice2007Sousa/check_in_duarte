@@ -1952,97 +1952,98 @@ function AtletaIdEntry({ onFound }) {
   };
 
  return (
-  <main className="flex flex-col items-center justify-center px-6 py-12 gap-6">
+    <main className="flex flex-col items-center justify-center px-6 py-12 gap-6">
 
-    {/* Logótipo Centralizado */}
-    <div className="flex flex-col items-center leading-none mb-2">
-      <div className="flex items-center gap-2 text-white font-bold text-2xl sm:text-3xl tracking-wider">
-        <span>TURN</span>
-        <div className="flex items-center gap-1.5 border border-white rounded-full px-3 py-1 text-sm font-extrabold">
-          <span>ON</span>
-          <span className="w-4 h-4 bg-white rounded-full inline-block"></span>
+      {/* Logótipo Central em Código */}
+      <div className="flex flex-col items-center leading-none mb-2">
+        <div className="flex items-center gap-2 text-white font-bold text-2xl sm:text-3xl tracking-wider">
+          <span>TURN</span>
+          <div className="flex items-center gap-1.5 border border-white rounded-full px-3 py-1 text-sm font-extrabold">
+            <span>ON</span>
+            <span className="w-4 h-4 bg-white rounded-full inline-block"></span>
+          </div>
         </div>
+        <span className="text-xs sm:text-sm tracking-[0.4em] text-white font-light mt-1.5 w-full text-center">
+          FITNESS
+        </span>
       </div>
-      <span className="text-xs sm:text-sm tracking-[0.4em] text-white font-light mt-1.5 w-full text-center">
-        FITNESS
-      </span>
-    </div>
 
-    {/* Texto e Ícone de Introdução do ID */}
-    <div className="flex items-center gap-2 text-zinc-400 text-sm">
-      <KeyRound size={16} />
-      Introduz o teu ID de atleta
-    </div>
-
-    {/* Dígitos Introduzidos */}
-    <div className="min-h-[4.5rem] sm:min-h-[5.5rem] flex items-end justify-center">
-      <span className="font-mono-id text-5xl sm:text-6xl tracking-widest text-[#72E580]">
-        {digits || (
-          <span className="text-zinc-700">
-            –
-          </span>
-        )}
-      </span>
-    </div>
-
-    {checking && (
-      <div className="text-zinc-500 text-xs">
-        A verificar…
+      {/* Texto e Ícone do ID */}
+      <div className="flex items-center gap-2 text-zinc-400 text-sm">
+        <KeyRound size={16} />
+        Introduz o teu ID de atleta
       </div>
-    )}
 
-    {error && (
-      <div className="text-rose-400 text-sm">
-        {error}
+      {/* Dígitos Introduzidos */}
+      <div className="min-h-[4.5rem] sm:min-h-[5.5rem] flex items-end justify-center">
+        <span className="font-mono-id text-5xl sm:text-6xl tracking-widest text-[#72E580]">
+          {digits || (
+            <span className="text-zinc-700">
+              –
+            </span>
+          )}
+        </span>
       </div>
-    )}
 
-    {/* Teclado Numérico */}
-    <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+      {checking && (
+        <div className="text-zinc-500 text-xs">
+          A verificar…
+        </div>
+      )}
 
-      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+      {error && (
+        <div className="text-rose-400 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Teclado Numérico */}
+      <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <button
+            key={n}
+            disabled={checking}
+            onClick={() => press(String(n))}
+            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] active:scale-95 disabled:opacity-40 transition-colors"
+          >
+            {n}
+          </button>
+        ))}
+
         <button
-          key={n}
           disabled={checking}
-          onClick={() => press(String(n))}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] active:scale-95 disabled:opacity-40 transition-colors"
+          onClick={clearAll}
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 transition-colors"
         >
-          {n}
+          <Ban size={20} />
         </button>
-      ))}
 
-      <button
-        disabled={checking}
-        onClick={clearAll}
-        className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 transition-colors"
-      >
-        <Ban size={20} />
-      </button>
+        <button
+          disabled={checking}
+          onClick={() => press("0")}
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] transition-colors"
+        >
+          0
+        </button>
 
-      <button
-        disabled={checking}
-        onClick={() => press("0")}
-        className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] transition-colors"
-      >
-        0
-      </button>
+        <button
+          onClick={submit}
+          disabled={!digits || checking}
+          className={`aspect-square rounded-xl flex items-center justify-center font-medium transition-all ${
+            digits && !checking
+              ? "bg-[#72E580] text-zinc-950 hover:bg-[#60d46f] active:scale-95"
+              : "bg-zinc-900 border border-zinc-800 text-zinc-700 cursor-not-allowed"
+          }`}
+        >
+          <CheckCircle2 size={22} />
+        </button>
 
-      <button
-        onClick={submit}
-        disabled={!digits || checking}
-        className={`aspect-square rounded-xl flex items-center justify-center font-medium transition-all ${
-          digits && !checking
-            ? "bg-[#72E580] text-zinc-950 hover:bg-[#60d46f] active:scale-95"
-            : "bg-zinc-900 border border-zinc-800 text-zinc-700 cursor-not-allowed"
-        }`}
-      >
-        <CheckCircle2 size={22} />
-      </button>
+      </div>
 
-    </div>
-
-  </main>
-);
+    </main>
+  );
+}
 
 /* ============================================================
    PRIMEIRA DEFINIÇÃO DO CÓDIGO
