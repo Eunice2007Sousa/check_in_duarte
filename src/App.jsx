@@ -1979,7 +1979,7 @@ function AtletaIdEntry({ onFound }) {
 
     </span>
 
-  </div>
+  </main>
 
       {checking && (
         <div className="text-zinc-500 text-xs">
