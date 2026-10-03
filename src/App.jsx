@@ -1954,26 +1954,39 @@ function AtletaIdEntry({ onFound }) {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center px-6 py-16 gap-6">
+    <main className="flex flex-col items-center justify-center px-6 py-12 gap-6">
 
-      <div className="flex items-center gap-2 text-zinc-500 text-sm">
-        <KeyRound size={16} />
-        Introduz o teu ID de atleta
-      </div>
+  {/* Logótipo Central e Subtítulo */}
+  <div className="flex flex-col items-center text-center mb-2">
+    <img 
+      src="/brand-logo.jpg" 
+      alt="Turn On Fitness" 
+      className="h-16 w-auto mb-3 object-contain" 
+    />
+    <p className="text-zinc-400 text-sm max-w-xs">
+      Treino personalizado individual e em grupo
+    </p>
+  </div>
 
-      <div className="min-h-[4.5rem] sm:min-h-[5.5rem] flex items-end justify-center">
+  <div className="flex items-center gap-2 text-zinc-400 text-sm">
+    <KeyRound size={16} />
+    Introduz o teu ID de atleta
+  </div>
 
-        <span className="font-mono-id text-5xl sm:text-6xl tracking-widest text-lime-400">
+  <div className="min-h-[4.5rem] sm:min-h-[5.5rem] flex items-end justify-center">
 
-          {digits || (
-            <span className="text-zinc-700">
-              –
-            </span>
-          )}
+    {/* Cor do ID alterada para o novo verde [#72E580] */}
+    <span className="font-mono-id text-5xl sm:text-6xl tracking-widest text-[#72E580]">
 
+      {digits || (
+        <span className="text-zinc-700">
+          –
         </span>
+      )}
 
-      </div>
+    </span>
+
+  </div>
 
       {checking && (
         <div className="text-zinc-500 text-xs">
