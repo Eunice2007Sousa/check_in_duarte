@@ -201,12 +201,9 @@ export default function App() {
       )}
 
       <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-        <div className="flex items-center gap-2 text-[#72E580]">
-          <Dumbbell size={22} />
-          <span className="font-display text-2xl tracking-wide">
-            TURN ON FITNESS
-          </span>
-        </div>
+        <div className="flex items-center">
+  <img src="/brand-logo.jpg" alt="Turn On Fitness" className="h-8 w-auto object-contain" />
+</div>
 
         <div className="flex gap-2">
 
