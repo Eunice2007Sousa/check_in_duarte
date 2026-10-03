@@ -201,8 +201,13 @@ export default function App() {
       )}
 
       <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-        <div className="flex items-center">
-  <img src="/brand-logo.jpg" alt="Turn On Fitness" className="h-8 w-auto object-contain" />
+        <div className="flex items-center gap-2 text-white font-bold text-lg tracking-wider">
+  <span>TURN</span>
+  <div className="flex items-center gap-1.5 border border-white rounded-full px-2 py-0.5 text-xs font-extrabold">
+    <span>ON</span>
+    <span className="w-2.5 h-2.5 bg-zinc-900 border border-zinc-700 rounded-full inline-block"></span>
+  </div>
+  <span className="text-xs tracking-[0.2em] text-zinc-300 font-light ml-1">FITNESS</span>
 </div>
 
         <div className="flex gap-2">
