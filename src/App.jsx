@@ -201,18 +201,7 @@ export default function App() {
       )}
 
       <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-        <div className="flex flex-col items-center leading-none">
-  <div className="flex items-center gap-1.5 text-white font-bold text-base tracking-wider">
-    <span>TURN</span>
-    <div className="flex items-center gap-1.5 border border-white rounded-full px-2 py-0.5 text-xs font-extrabold">
-      <span>ON</span>
-      <span className="w-3.5 h-3.5 bg-white rounded-full inline-block"></span>
-    </div>
-  </div>
-  <span className="text-[10px] tracking-[0.4em] text-white font-light mt-1 w-full text-center">
-    FITNESS
-  </span>
-</div>
+       <div></div>
 
         <div className="flex gap-2">
 
@@ -1965,24 +1954,19 @@ function AtletaIdEntry({ onFound }) {
   return (
     <main className="flex flex-col items-center justify-center px-6 py-12 gap-6">
 
-  {/* Logótipo Central e Subtítulo */}
-  <div className="flex flex-col items-center text-center mb-2">
-    <img 
-      src="/brand-logo.jpg" 
-      alt="Turn On Fitness" 
-      className="h-16 w-auto mb-3 object-contain" 
-    />
-    <p className="text-zinc-400 text-sm max-w-xs">
-      Treino personalizado individual e em grupo
-    </p>
-  </div>
-
-  <div className="flex items-center gap-2 text-zinc-400 text-sm">
-    <KeyRound size={16} />
-    Introduz o teu ID de atleta
-  </div>
-
-  <div className="min-h-[4.5rem] sm:min-h-[5.5rem] flex items-end justify-center">
+ {/* Logótipo Central em Código */}
+      <div className="flex flex-col items-center leading-none mb-4">
+        <div className="flex items-center gap-2 text-white font-bold text-2xl sm:text-3xl tracking-wider">
+          <span>TURN</span>
+          <div className="flex items-center gap-1.5 border border-white rounded-full px-3 py-1 text-sm font-extrabold">
+            <span>ON</span>
+            <span className="w-4 h-4 bg-white rounded-full inline-block"></span>
+          </div>
+        </div>
+        <span className="text-xs sm:text-sm tracking-[0.4em] text-white font-light mt-1.5 w-full text-center">
+          FITNESS
+        </span>
+      </div>
 
     {/* Cor do ID alterada para o novo verde [#72E580] */}
     <span className="font-mono-id text-5xl sm:text-6xl tracking-widest text-[#72E580]">
