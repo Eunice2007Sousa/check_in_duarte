@@ -1845,29 +1845,18 @@ if (!candidate.tem_codigo) {
    ATLETA ID ENTRY
 ============================================================ */
 
-function AtletaIdEntry({ onFound }) {
+function AtletaIdEntry({ onFound, onSelectDuarte }) {
 
-  const [digits, setDigits] =
-    useState("");
-
-  const [error, setError] =
-    useState("");
-
-  const [checking, setChecking] =
-    useState(false);
+  const [digits, setDigits] = useState("");
+  const [error, setError] = useState("");
+  const [checking, setChecking] = useState(false);
 
   const MAX_ID_LEN = 6;
 
   const press = (d) => {
-
-    if (
-      !checking &&
-      digits.length < MAX_ID_LEN
-    ) {
+    if (!checking && digits.length < MAX_ID_LEN) {
       setError("");
-      setDigits(
-        (p) => p + d
-      );
+      setDigits((p) => p + d);
     }
   };
 
@@ -1877,7 +1866,6 @@ function AtletaIdEntry({ onFound }) {
   };
 
   const submit = async () => {
-
     if (!digits || checking) {
       return;
     }
@@ -1885,56 +1873,51 @@ function AtletaIdEntry({ onFound }) {
     setChecking(true);
     setError("");
 
-    try {
+    // 1. Interceta o ID 0 para o Duarte
+    if (digits === "0") {
+      setChecking(false);
+      if (onFound) {
+        onFound({
+          numero_id: 0,
+          nome: "DUARTE",
+          isDono: true,
+          tem_codigo: true
+        });
+      } else if (onSelectDuarte) {
+        onSelectDuarte();
+      }
+      return;
+    }
 
-      const {
-        data,
-        error
-      } = await supabase.rpc(
+    // 2. Consulta normal no Supabase para atletas
+    try {
+      const { data, error } = await supabase.rpc(
         "fn_buscar_nome_atleta",
         {
-          p_numero_id:
-            Number(digits)
+          p_numero_id: Number(digits)
         }
       );
 
       if (error) throw error;
 
       if (data && data.length > 0) {
-
-        /*
-          A função devolve numero_id, nome
-          e codigo_definido.
-        */
-
         onFound({
           ...data[0],
-          tem_codigo:
-            data[0].codigo_definido
+          tem_codigo: data[0].codigo_definido
         });
-
       } else {
-
-        setError(
-          "ID não reconhecido."
-        );
-
+        setError("ID não reconhecido.");
         setDigits("");
       }
 
     } catch (e) {
-
-      setError(
-        friendlyError(e)
-      );
-
+      setError(friendlyError(e));
     } finally {
-
       setChecking(false);
     }
   };
 
- return (
+  return (
     <main className="flex flex-col items-center justify-center px-6 py-12 gap-6">
 
       {/* Logótipo Central em Código */}
@@ -2027,7 +2010,6 @@ function AtletaIdEntry({ onFound }) {
     </main>
   );
 }
-
 /* ============================================================
    PRIMEIRA DEFINIÇÃO DO CÓDIGO
 ============================================================ */
