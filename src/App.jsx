@@ -264,9 +264,17 @@ function PinGate({
   const [checking, setChecking] = useState(false);
 
   const timer = useRef(null);
+  const verifyRef = useRef(verify);
+  const onSuccessRef = useRef(onSuccess);
+
+  // Mantém as referências atualizadas sem disparar re-render no useEffect
+  useEffect(() => {
+    verifyRef.current = verify;
+    onSuccessRef.current = onSuccess;
+  }, [verify, onSuccess]);
 
   useEffect(() => {
-    if (digits.length === CODE_LEN) {
+    if (digits.length === CODE_LEN && !checking) {
 
       clearTimeout(timer.current);
 
@@ -274,10 +282,10 @@ function PinGate({
         setChecking(true);
 
         try {
-          const payload = await verify(digits);
+          const payload = await verifyRef.current(digits);
 
           if (payload) {
-            onSuccess(payload);
+            onSuccessRef.current(payload);
           } else {
             setError("PIN incorreto.");
             setDigits("");
@@ -295,7 +303,7 @@ function PinGate({
     }
 
     return () => clearTimeout(timer.current);
-  }, [digits, verify, onSuccess]);
+  }, [digits, checking]);
 
   const press = (d) => {
     if (!checking && digits.length < CODE_LEN) {
@@ -310,7 +318,7 @@ function PinGate({
       {onBack && (
         <button
           onClick={onBack}
-          className="self-start ml-2 -mb-2 flex items-center gap-1 text-xs text-zinc-500 hover:text-lime-400"
+          className="self-start ml-2 -mb-2 flex items-center gap-1 text-xs text-zinc-500 hover:text-[#72E580] transition-colors"
         >
           <ArrowLeft size={14} />
           Voltar
@@ -332,9 +340,9 @@ function PinGate({
         {Array.from({ length: CODE_LEN }).map((_, i) => (
           <div
             key={i}
-            className={`w-16 h-20 sm:w-20 sm:h-24 rounded-xl border-2 flex items-center justify-center font-mono-id text-4xl sm:text-5xl ${
+            className={`w-16 h-20 sm:w-20 sm:h-24 rounded-xl border-2 flex items-center justify-center font-mono-id text-4xl sm:text-5xl transition-colors ${
               digits[i]
-                ? "border-lime-400 text-lime-400"
+                ? "border-[#72E580] text-[#72E580]"
                 : "border-zinc-800 text-zinc-700"
             }`}
           >
@@ -357,12 +365,12 @@ function PinGate({
 
       <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
 
-        {[1,2,3,4,5,6,7,8,9].map((n) => (
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
           <button
             key={n}
             disabled={checking}
             onClick={() => press(String(n))}
-            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400 active:scale-95 disabled:opacity-40"
+            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] active:scale-95 disabled:opacity-40 transition-colors"
           >
             {n}
           </button>
@@ -374,7 +382,7 @@ function PinGate({
             setDigits("");
             setError("");
           }}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 disabled:opacity-40"
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 disabled:opacity-40 transition-colors"
         >
           <Ban size={20} />
         </button>
@@ -382,7 +390,7 @@ function PinGate({
         <button
           disabled={checking}
           onClick={() => press("0")}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400 active:scale-95 disabled:opacity-40"
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] active:scale-95 disabled:opacity-40 transition-colors"
         >
           0
         </button>
