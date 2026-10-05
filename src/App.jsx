@@ -197,11 +197,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Header Limpo */}
+      {/* Header com botão de sair quando o Duarte está logado */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
         <div></div>
 
-        {/* Botão de Terminar Sessão quando o Duarte está autenticado */}
         {role === "dono" && ownerPin && (
           <button
             onClick={logoutDuarte}
@@ -225,24 +224,18 @@ export default function App() {
             label="Insere o teu PIN para acesso à tua área"
             onBack={() => setRole("atleta")}
             verify={async (digits) => {
-              // 1. Tenta validar no Supabase via RPC
-              try {
-                const { data, error } = await supabase.rpc(
-                  "fn_verificar_owner",
-                  { p_pin: digits }
-                );
-
-                if (!error && data === true) {
-                  return digits;
-                }
-              } catch (e) {
-                // Ignora erro de RPC para avançar para o fallback
-              }
-
-              // 2. Salvaguarda local: permite entrar com 1234 ou 0000
-              if (digits === "1234" || digits === "0000") {
+              // PIN DO DUARTE FIXADO EM 0000 (com fallback para 1234)
+              if (digits === "0000" || digits === "1234") {
                 return digits;
               }
+
+              // Tenta também no Supabase caso esteja configurado lá
+              try {
+                const { data, error } = await supabase.rpc("fn_verificar_owner", {
+                  p_pin: digits
+                });
+                if (!error && data === true) return digits;
+              } catch (e) {}
 
               return null;
             }}
@@ -1864,7 +1857,6 @@ function AtletaArea({ onSelectDuarte }) {
 ============================================================ */
 
 function AtletaIdEntry({ onFound, onSelectDuarte }) {
-
   const [digits, setDigits] = useState("");
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(false);
@@ -1884,37 +1876,27 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
   };
 
   const submit = async () => {
-    if (!digits || checking) {
-      return;
-    }
+    if (!digits || checking) return;
 
     setChecking(true);
     setError("");
 
-    // 1. Interceta o ID 0 para o Duarte
-    if (digits === "0") {
+    // DUARTE: Se for o ID "0", força a ida para o ecrã do Duarte
+    if (String(digits).trim() === "0") {
       setChecking(false);
-      if (onFound) {
-        onFound({
-          numero_id: 0,
-          nome: "DUARTE",
-          isDono: true,
-          tem_codigo: true
-        });
-      } else if (onSelectDuarte) {
+      if (onSelectDuarte) {
         onSelectDuarte();
+      } else if (onFound) {
+        onFound({ numero_id: "0", nome: "DUARTE", isDono: true });
       }
       return;
     }
 
-    // 2. Consulta normal no Supabase para atletas
+    // ALUNOS: Procura normal
     try {
-      const { data, error } = await supabase.rpc(
-        "fn_buscar_nome_atleta",
-        {
-          p_numero_id: Number(digits)
-        }
-      );
+      const { data, error } = await supabase.rpc("fn_buscar_nome_atleta", {
+        p_numero_id: Number(digits)
+      });
 
       if (error) throw error;
 
@@ -1927,7 +1909,6 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
         setError("ID não reconhecido.");
         setDigits("");
       }
-
     } catch (e) {
       setError(friendlyError(e));
     } finally {
@@ -1938,7 +1919,6 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
   return (
     <main className="flex flex-col items-center justify-center px-6 py-12 gap-6">
 
-      {/* Logótipo Central em Código */}
       <div className="flex flex-col items-center leading-none mb-2">
         <div className="flex items-center gap-2 text-white font-bold text-2xl sm:text-3xl tracking-wider">
           <span>TURN</span>
@@ -1952,38 +1932,21 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
         </span>
       </div>
 
-      {/* Texto e Ícone do ID */}
       <div className="flex items-center gap-2 text-zinc-400 text-sm">
         <KeyRound size={16} />
-        Introduz o teu ID de atleta
+        Introduz o teu ID
       </div>
 
-      {/* Dígitos Introduzidos */}
       <div className="min-h-[4.5rem] sm:min-h-[5.5rem] flex items-end justify-center">
         <span className="font-mono-id text-5xl sm:text-6xl tracking-widest text-[#72E580]">
-          {digits || (
-            <span className="text-zinc-700">
-              –
-            </span>
-          )}
+          {digits || <span className="text-zinc-700">–</span>}
         </span>
       </div>
 
-      {checking && (
-        <div className="text-zinc-500 text-xs">
-          A verificar…
-        </div>
-      )}
+      {checking && <div className="text-zinc-500 text-xs">A verificar…</div>}
+      {error && <div className="text-rose-400 text-sm">{error}</div>}
 
-      {error && (
-        <div className="text-rose-400 text-sm">
-          {error}
-        </div>
-      )}
-
-      {/* Teclado Numérico */}
       <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
-
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
           <button
             key={n}
@@ -2022,7 +1985,6 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
         >
           <CheckCircle2 size={22} />
         </button>
-
       </div>
 
     </main>
