@@ -2010,7 +2010,7 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
     </main>
   );
 }
-/* ============================================================
+//* ============================================================
    PRIMEIRA DEFINIÇÃO DO CÓDIGO
 ============================================================ */
 
@@ -2020,63 +2020,36 @@ function AtletaFirstCode({
   onBack
 }) {
 
-  const [step, setStep] =
-    useState("create");
-
-  const [digits, setDigits] =
-    useState("");
-
-  const [firstCode, setFirstCode] =
-    useState("");
-
-  const [error, setError] =
-    useState("");
-
-  const [saving, setSaving] =
-    useState(false);
+  const [step, setStep] = useState("create");
+  const [digits, setDigits] = useState("");
+  const [firstCode, setFirstCode] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const press = (d) => {
-
-    if (
-      saving ||
-      digits.length >= CODE_LEN
-    ) {
+    if (saving || digits.length >= CODE_LEN) {
       return;
     }
 
     setError("");
-
-    setDigits(
-      (p) => p + d
-    );
+    setDigits((p) => p + d);
   };
 
   useEffect(() => {
-
-    if (
-      step === "create" &&
-      digits.length === CODE_LEN
-    ) {
-
+    if (step === "create" && digits.length === CODE_LEN) {
       setFirstCode(digits);
       setDigits("");
       setStep("confirm");
     }
-
   }, [digits, step]);
 
   const confirmCode = async () => {
-
     if (digits.length !== CODE_LEN) {
       return;
     }
 
     if (digits !== firstCode) {
-
-      setError(
-        "Os códigos não coincidem."
-      );
-
+      setError("Os códigos não coincidem.");
       setDigits("");
       return;
     }
@@ -2085,15 +2058,10 @@ function AtletaFirstCode({
     setError("");
 
     try {
-
-      const {
-        data,
-        error
-      } = await supabase.rpc(
+      const { data, error } = await supabase.rpc(
         "fn_definir_codigo_atleta",
         {
-          p_numero_id:
-            candidate.numero_id,
+          p_numero_id: candidate.numero_id,
           p_novo_codigo: digits
         }
       );
@@ -2106,15 +2074,10 @@ function AtletaFirstCode({
         Depois de guardar o código,
         fazemos login automaticamente.
       */
-
-      const {
-        data: loginData,
-        error: loginError
-      } = await supabase.rpc(
+      const { data: loginData, error: loginError } = await supabase.rpc(
         "fn_login_atleta",
         {
-          p_numero_id:
-            candidate.numero_id,
+          p_numero_id: candidate.numero_id,
           p_codigo: digits
         }
       );
@@ -2123,13 +2086,8 @@ function AtletaFirstCode({
         throw loginError;
       }
 
-      if (
-        !loginData ||
-        loginData.length === 0
-      ) {
-        throw new Error(
-          "CREDENCIAIS_INVALIDAS"
-        );
+      if (!loginData || loginData.length === 0) {
+        throw new Error("CREDENCIAIS_INVALIDAS");
       }
 
       onSuccess({
@@ -2138,27 +2096,19 @@ function AtletaFirstCode({
       });
 
     } catch (e) {
-
-      setError(
-        friendlyError(e)
-      );
-
+      setError(friendlyError(e));
     } finally {
-
       setSaving(false);
     }
   };
 
   const clear = () => {
-
     if (saving) return;
-
     setDigits("");
     setError("");
   };
 
   const goBackStep = () => {
-
     if (saving) return;
 
     setError("");
@@ -2177,14 +2127,13 @@ function AtletaFirstCode({
 
       <button
         onClick={goBackStep}
-        className="self-start ml-2 -mb-2 flex items-center gap-1 text-xs text-zinc-500 hover:text-lime-400"
+        className="self-start ml-2 -mb-2 flex items-center gap-1 text-xs text-zinc-500 hover:text-[#72E580] transition-colors"
       >
         <ArrowLeft size={14} />
         Voltar
       </button>
 
       <div className="text-center">
-
         <div className="font-display text-2xl tracking-wide text-zinc-100">
           {candidate.nome} — ID {candidate.numero_id}
         </div>
@@ -2194,7 +2143,6 @@ function AtletaFirstCode({
             ? "É a tua primeira vez. Escolhe um código de 4 dígitos para passares a aceder à tua área."
             : "Repete o código de 4 dígitos para confirmar."}
         </div>
-
       </div>
 
       <div className="flex items-center gap-2 text-zinc-500 text-sm">
@@ -2205,26 +2153,18 @@ function AtletaFirstCode({
       </div>
 
       <div className="flex gap-3">
-
-        {Array.from({
-          length: CODE_LEN
-        }).map((_, i) => (
-
+        {Array.from({ length: CODE_LEN }).map((_, i) => (
           <div
             key={i}
-            className={`w-16 h-20 sm:w-20 sm:h-24 rounded-xl border-2 flex items-center justify-center font-mono-id text-4xl sm:text-5xl ${
+            className={`w-16 h-20 sm:w-20 sm:h-24 rounded-xl border-2 flex items-center justify-center font-mono-id text-4xl sm:text-5xl transition-colors ${
               digits[i]
-                ? "border-lime-400 text-lime-400"
+                ? "border-[#72E580] text-[#72E580]"
                 : "border-zinc-800 text-zinc-700"
             }`}
           >
-            {digits[i]
-              ? "•"
-              : "–"}
+            {digits[i] ? "•" : "–"}
           </div>
-
         ))}
-
       </div>
 
       {saving && (
@@ -2239,57 +2179,46 @@ function AtletaFirstCode({
         </div>
       )}
 
+      {/* Teclado Numérico */}
       <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
-
-        {[1,2,3,4,5,6,7,8,9].map((n) => (
-
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
           <button
             key={n}
             disabled={saving}
-            onClick={() =>
-              press(String(n))
-            }
-            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400 active:scale-95 disabled:opacity-40"
+            onClick={() => press(String(n))}
+            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] active:scale-95 disabled:opacity-40 transition-colors"
           >
             {n}
           </button>
-
         ))}
 
         <button
           disabled={saving}
           onClick={clear}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400"
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 transition-colors"
         >
           <Ban size={20} />
         </button>
 
         <button
           disabled={saving}
-          onClick={() =>
-            press("0")
-          }
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-lime-400/50 hover:text-lime-400"
+          onClick={() => press("0")}
+          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] transition-colors"
         >
           0
         </button>
 
         <button
           onClick={confirmCode}
-          disabled={
-            digits.length !== CODE_LEN ||
-            saving
-          }
-          className={`aspect-square rounded-xl flex items-center justify-center ${
-            digits.length === CODE_LEN &&
-            !saving
-              ? "bg-lime-400 text-zinc-950 hover:bg-lime-300"
-              : "bg-zinc-900 border border-zinc-800 text-zinc-700"
+          disabled={digits.length !== CODE_LEN || saving}
+          className={`aspect-square rounded-xl flex items-center justify-center transition-all ${
+            digits.length === CODE_LEN && !saving
+              ? "bg-[#72E580] text-zinc-950 hover:bg-[#60d46f] active:scale-95"
+              : "bg-zinc-900 border border-zinc-800 text-zinc-700 cursor-not-allowed"
           }`}
         >
           <CheckCircle2 size={22} />
         </button>
-
       </div>
 
     </main>
@@ -2306,70 +2235,43 @@ function ChangeAthleteCode({
   onCancel
 }) {
 
-  const [currentCode, setCurrentCode] =
-    useState("");
-
-  const [newCode, setNewCode] =
-    useState("");
-
-  const [confirmCode, setConfirmCode] =
-    useState("");
-
-  const [error, setError] =
-    useState("");
-
-  const [saving, setSaving] =
-    useState(false);
+  const [currentCode, setCurrentCode] = useState("");
+  const [newCode, setNewCode] = useState("");
+  const [confirmCode, setConfirmCode] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const save = async () => {
-
     setError("");
 
     if (!/^\d{4}$/.test(currentCode)) {
-      return setError(
-        "O código atual deve ter 4 dígitos."
-      );
+      return setError("O código atual deve ter 4 dígitos.");
     }
 
     if (!/^\d{4}$/.test(newCode)) {
-      return setError(
-        "O novo código deve ter 4 dígitos."
-      );
+      return setError("O novo código deve ter 4 dígitos.");
     }
 
     if (newCode !== confirmCode) {
-      return setError(
-        "Os novos códigos não coincidem."
-      );
+      return setError("Os novos códigos não coincidem.");
     }
 
     if (newCode === currentCode) {
-      return setError(
-        "O novo código deve ser diferente do atual."
-      );
+      return setError("O novo código deve ser diferente do atual.");
     }
 
     setSaving(true);
 
     try {
+      const { error } = await supabase.rpc(
+        "fn_alterar_codigo_atleta_proprio",
+        {
+          p_numero_id: session.numero_id,
+          p_codigo_atual: currentCode,
+          p_novo_codigo: newCode
+        }
+      );
 
-      // NOTA: o nome desta função tinha de corresponder
-      // exatamente ao alias criado no SQL
-      // ("fn_alterar_codigo_atleta_proprio"), caso
-      // contrário a chamada falhava com "function not found".
-      const {
-  error
-} = await supabase.rpc(
-  "fn_alterar_codigo_atleta_proprio",
-  {
-    p_numero_id:
-      session.numero_id,
-    p_codigo_atual:
-      currentCode,
-    p_novo_codigo:
-      newCode
-  }
-);
       if (error) {
         throw error;
       }
@@ -2378,20 +2280,14 @@ function ChangeAthleteCode({
         Atualizamos o código da sessão
         para o novo código.
       */
-
       onChanged({
         ...session,
         codigo: newCode
       });
 
     } catch (e) {
-
-      setError(
-        friendlyError(e)
-      );
-
+      setError(friendlyError(e));
     } finally {
-
       setSaving(false);
     }
   };
@@ -2400,7 +2296,6 @@ function ChangeAthleteCode({
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
 
       <div>
-
         <div className="font-display text-xl tracking-wide text-zinc-200">
           Alterar código
         </div>
@@ -2408,25 +2303,19 @@ function ChangeAthleteCode({
         <div className="text-xs text-zinc-500 mt-1">
           O código é pessoal e será usado para entrar na tua área.
         </div>
-
       </div>
 
       <div className="space-y-3">
-
         <input
           type="password"
           inputMode="numeric"
           maxLength={4}
           value={currentCode}
           onChange={(e) =>
-            setCurrentCode(
-              e.target.value
-                .replace(/\D/g, "")
-                .slice(0, 4)
-            )
+            setCurrentCode(e.target.value.replace(/\D/g, "").slice(0, 4))
           }
           placeholder="Código atual"
-          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id"
+          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id focus:border-[#72E580] focus:outline-none transition-colors"
         />
 
         <input
@@ -2435,14 +2324,10 @@ function ChangeAthleteCode({
           maxLength={4}
           value={newCode}
           onChange={(e) =>
-            setNewCode(
-              e.target.value
-                .replace(/\D/g, "")
-                .slice(0, 4)
-            )
+            setNewCode(e.target.value.replace(/\D/g, "").slice(0, 4))
           }
           placeholder="Novo código"
-          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id"
+          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id focus:border-[#72E580] focus:outline-none transition-colors"
         />
 
         <input
@@ -2451,16 +2336,11 @@ function ChangeAthleteCode({
           maxLength={4}
           value={confirmCode}
           onChange={(e) =>
-            setConfirmCode(
-              e.target.value
-                .replace(/\D/g, "")
-                .slice(0, 4)
-            )
+            setConfirmCode(e.target.value.replace(/\D/g, "").slice(0, 4))
           }
           placeholder="Repetir novo código"
-          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id"
+          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm w-full font-mono-id focus:border-[#72E580] focus:outline-none transition-colors"
         />
-
       </div>
 
       {error && (
@@ -2470,31 +2350,26 @@ function ChangeAthleteCode({
       )}
 
       <div className="flex gap-2">
-
         <button
           onClick={save}
           disabled={saving}
-          className="bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 disabled:opacity-40"
+          className="bg-[#72E580] text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-[#60d46f] disabled:opacity-40 transition-colors"
         >
-          {saving
-            ? "A guardar…"
-            : "Alterar código"}
+          {saving ? "A guardar…" : "Alterar código"}
         </button>
 
         <button
           onClick={onCancel}
           disabled={saving}
-          className="border border-zinc-800 text-zinc-400 rounded-md px-4 py-2 text-sm hover:text-zinc-200"
+          className="border border-zinc-800 text-zinc-400 rounded-md px-4 py-2 text-sm hover:text-zinc-200 transition-colors"
         >
           Cancelar
         </button>
-
       </div>
 
     </div>
   );
 }
-
 /* ============================================================
    DASHBOARD ATLETA
 ============================================================ */
