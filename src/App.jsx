@@ -1760,60 +1760,61 @@ function OwnerAuditLog({ ownerPin }) {
    ÁREA DO ATLETA
 ============================================================ */
 
-function AtletaArea() {
+function AtletaArea({ onSelectDuarte }) {
 
-  const [candidate, setCandidate] =
-    useState(null);
+  const [candidate, setCandidate] = useState(null);
+  const [session, setSession] = useState(null);
 
-  const [session, setSession] =
-    useState(null);
+  // Interceção para detetar o Duarte (ID 0)
+  const handleFoundCandidate = (atletaData) => {
+    if (atletaData.isDono || String(atletaData.numero_id) === "0") {
+      if (onSelectDuarte) {
+        onSelectDuarte();
+      }
+      return;
+    }
+    setCandidate(atletaData);
+  };
 
   if (!session) {
 
     if (!candidate) {
       return (
         <AtletaIdEntry
-          onFound={setCandidate}
+          onFound={handleFoundCandidate}
+          onSelectDuarte={onSelectDuarte}
         />
       );
     }
 
     /*
-  PRIMEIRA VEZ:
-  o atleta ainda não tem código.
-*/
-
-if (!candidate.tem_codigo) {
-  return (
-    <AtletaFirstCode
-      candidate={candidate}
-      onSuccess={setSession}
-      onBack={() =>
-        setCandidate(null)
-      }
-    />
-  );
-}
+      PRIMEIRA VEZ:
+      o atleta ainda não tem código.
+    */
+    if (!candidate.tem_codigo) {
+      return (
+        <AtletaFirstCode
+          candidate={candidate}
+          onSuccess={setSession}
+          onBack={() => setCandidate(null)}
+        />
+      );
+    }
 
     /*
       JÁ TEM CÓDIGO:
       login normal.
     */
-
     return (
       <PinGate
         title={`${candidate.nome} - ID ${candidate.numero_id}`}
         label="Insere o teu PIN para acesso à tua área"
         verify={async (digits) => {
 
-          const {
-            data,
-            error
-          } = await supabase.rpc(
+          const { data, error } = await supabase.rpc(
             "fn_login_atleta",
             {
-              p_numero_id:
-                candidate.numero_id,
+              p_numero_id: candidate.numero_id,
               p_codigo: digits
             }
           );
@@ -1830,9 +1831,7 @@ if (!candidate.tem_codigo) {
           };
         }}
         onSuccess={setSession}
-        onBack={() =>
-          setCandidate(null)
-        }
+        onBack={() => setCandidate(null)}
       />
     );
   }
