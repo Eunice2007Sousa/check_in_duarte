@@ -224,21 +224,14 @@ export default function App() {
             label="Insere o teu PIN para acesso à tua área"
             onBack={() => setRole("atleta")}
             verify={async (digits) => {
-              // PIN DO DUARTE FIXADO EM 0000 (com fallback para 1234)
-              if (digits === "0000" || digits === "1234") {
-                return digits;
-              }
+  const { data, error } = await supabase.rpc("fn_verificar_owner", {
+    p_pin: digits
+  });
 
-              // Tenta também no Supabase caso esteja configurado lá
-              try {
-                const { data, error } = await supabase.rpc("fn_verificar_owner", {
-                  p_pin: digits
-                });
-                if (!error && data === true) return digits;
-              } catch (e) {}
+  if (error) throw error;
 
-              return null;
-            }}
+  return data === true ? digits : null;
+}}
             onSuccess={(pin) => {
               setOwnerPin(pin);
             }}
