@@ -168,12 +168,9 @@ export default function App() {
   const [role, setRole] = useState("atleta");
   const [ownerPin, setOwnerPin] = useState(null);
 
-  const goToRole = (r) => {
-    if (r === "atleta") {
-      setOwnerPin(null);
-    }
-
-    setRole(r);
+  const logoutDuarte = () => {
+    setOwnerPin(null);
+    setRole("atleta");
   };
 
   return (
@@ -200,39 +197,23 @@ export default function App() {
         </div>
       )}
 
+      {/* Header Limpo - Sem os dois botões de navegação */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-       <div></div>
+        <div></div>
 
-        <div className="flex gap-2">
-
+        {/* Mostra o botão de Sair apenas se o Duarte estiver dentro da área dele */}
+        {role === "dono" && ownerPin && (
           <button
-            onClick={() => goToRole("dono")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm border transition-colors ${
-              role === "dono"
-                ? "border-[#72E580] text-[#72E580]"
-                : "border-zinc-800 text-zinc-500 hover:text-zinc-300"
-            }`}
+            onClick={logoutDuarte}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
           >
-            <Lock size={14} />
-            Área do Duarte
+            <Lock size={12} />
+            Terminar Sessão
           </button>
-
-          <button
-            onClick={() => goToRole("atleta")}
-            className={`px-4 py-2 rounded-md text-sm border transition-colors ${
-              role === "atleta"
-                ? "border-[#72E580] text-[#72E580]"
-                : "border-zinc-800 text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            Área do Atleta
-          </button>
-
-        </div>
+        )}
       </header>
 
       {role === "dono" ? (
-
         ownerPin ? (
           <OwnerArea
             ownerPin={ownerPin}
@@ -241,6 +222,7 @@ export default function App() {
         ) : (
           <PinGate
             label="Código de acesso do Duarte"
+            onBack={() => setRole("atleta")}
             verify={async (digits) => {
               const { data, error } = await supabase.rpc(
                 "fn_verificar_owner",
@@ -253,12 +235,13 @@ export default function App() {
 
               return data === true ? digits : null;
             }}
-            onSuccess={setOwnerPin}
+            onSuccess={(pin) => {
+              setOwnerPin(pin);
+            }}
           />
         )
-
       ) : (
-        <AtletaArea />
+        <AtletaArea onSelectDuarte={() => setRole("dono")} />
       )}
 
     </div>
