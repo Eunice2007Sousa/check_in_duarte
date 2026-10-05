@@ -1486,10 +1486,9 @@ function OwnerSettings({
       );
 
     if (error) {
-      return setError(
-        friendlyError(error)
-      );
-    }
+  console.error("Erro alterar PIN:", error);
+  return setError(error.message || friendlyError(error));
+}
 
     onPinChanged(newPin);
     setNewPin("");
