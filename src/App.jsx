@@ -724,10 +724,10 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm border ${
+      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm border transition-colors ${
         active
-          ? "border-lime-400 text-lime-400"
-          : "border-zinc-800 text-zinc-500"
+          ? "border-[#72E580] text-[#72E580]"
+          : "border-zinc-800 text-zinc-500 hover:text-zinc-300"
       }`}
     >
       <Icon size={16} />
