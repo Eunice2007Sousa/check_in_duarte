@@ -144,6 +144,7 @@ const ERROR_MESSAGES = {
   PIN_FORMATO_INVALIDO: "O novo PIN deve ter 4 dígitos.",
   CODIGOS_NAO_IGUAIS: "Os códigos não coincidem.",
   CODIGO_JA_DEFINIDO: "Este atleta já tem um código definido.",
+  NOME_INVALIDO: "O nome não pode estar vazio.",
 };
 
 function friendlyError(error) {
@@ -1141,6 +1142,9 @@ function OwnerTurmas({ ownerPin }) {
 
 function OwnerAtletas({ ownerPin }) {
 
+  const [editingName, setEditingName] = useState(null);
+  const [nameDraft, setNameDraft] = useState("");
+
   const [atletas, setAtletas] = useState([]);
   const [proximoId, setProximoId] = useState(null);
 
@@ -1260,6 +1264,28 @@ function OwnerAtletas({ ownerPin }) {
     carregar();
   };
 
+  const renameAtleta = async (id) => {
+  setError("");
+
+  if (!nameDraft.trim()) {
+    return setError("O nome não pode estar vazio.");
+  }
+
+  const { error } = await supabase.rpc("fn_alterar_nome_atleta", {
+    p_owner_pin: ownerPin,
+    p_atleta_id: id,
+    p_novo_nome: nameDraft.trim()
+  });
+
+  if (error) {
+    return setError(friendlyError(error));
+  }
+
+  setEditingName(null);
+  setNameDraft("");
+  carregar();
+};
+
   return (
     <div className="space-y-6">
 
@@ -1339,16 +1365,51 @@ function OwnerAtletas({ ownerPin }) {
 
                 <div className="flex items-center gap-2">
 
-                  <span className="text-zinc-200">
-                    {a.nome}
-                  </span>
+  {editingName === a.id ? (
+    <>
+      <input
+        autoFocus
+        value={nameDraft}
+        onChange={(e) => setNameDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") renameAtleta(a.id);
+          if (e.key === "Escape") setEditingName(null);
+        }}
+        className="bg-zinc-950 border border-zinc-800 focus:border-[#72E580] focus:outline-none rounded-md px-2 py-1 text-sm w-44"
+      />
+      <button
+        onClick={() => renameAtleta(a.id)}
+        className="text-[#72E580] hover:text-[#60d46f]"
+      >
+        <CheckCircle2 size={16} />
+      </button>
+      <button
+        onClick={() => setEditingName(null)}
+        className="text-zinc-500 hover:text-rose-400"
+      >
+        <XCircle size={16} />
+      </button>
+    </>
+  ) : (
+    <>
+      <span className="text-zinc-200">{a.nome}</span>
+      <button
+        onClick={() => {
+          setEditingName(a.id);
+          setNameDraft(a.nome);
+        }}
+        className="text-xs text-zinc-600 hover:text-lime-400 underline"
+      >
+        editar
+      </button>
+    </>
+  )}
 
-                  <span className="font-mono-id text-zinc-500 text-xs">
-                    #{a.numero_id}
-                  </span>
+  <span className="font-mono-id text-zinc-500 text-xs">
+    #{a.numero_id}
+  </span>
 
-                </div>
-
+</div>
                 <div className="text-xs text-zinc-500">
                   Frequência atual:{" "}
                   <span className="text-lime-400">
