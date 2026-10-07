@@ -220,7 +220,7 @@ export default function App() {
           />
         ) : (
           <PinGate
-            title="ID 0"
+            title="ID - 0"
             label="Insere o teu PIN para acesso à tua área"
             onBack={() => setRole("atleta")}
             verify={async (digits) => {
@@ -1803,7 +1803,7 @@ function AtletaArea({ onSelectDuarte }) {
     */
     return (
       <PinGate
-        title={`ID ${candidate.numero_id}`}
+        title={`ID - ${candidate.numero_id}`}
         label="Insere o teu PIN para acesso à tua área"
         verify={async (digits) => {
 
