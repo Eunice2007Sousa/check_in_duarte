@@ -130,12 +130,12 @@ const ERROR_MESSAGES = {
   CREDENCIAIS_INVALIDAS: "ID ou PIN incorretos.",
   TURMA_INEXISTENTE: "Esta turma já não existe.",
   ATLETA_INEXISTENTE: "Este atleta já não existe.",
-  AULA_JA_PASSOU: "Esta aula já aconteceu — não é possível marcar.",
-  JA_INSCRITO: "Já estás inscrito nesta aula.",
-  TURMA_CHEIA: "Esta aula já está com as vagas todas preenchidas.",
+  AULA_JA_PASSOU: "Este treino já aconteceu — não é possível marcar.",
+  JA_INSCRITO: "Já estás inscrito neste treino.",
+  TURMA_CHEIA: "Este treino já está com as vagas todas preenchidas.",
   MARCACAO_INEXISTENTE: "Não foi possível encontrar esta marcação.",
-  CANCELAMENTO_TARDIO: "Já não é possível desmarcar: falta menos de 1h para a aula.",
-  APENAS_MES_ATUAL: "Só podes marcar ou desmarcar aulas do mês atual.",
+  CANCELAMENTO_TARDIO: "Já não é possível desmarcar: falta menos de 1h para o treino.",
+  APENAS_MES_ATUAL: "Só podes marcar ou desmarcar treinos do mês atual.",
   LIMITE_SEMANAL_ATINGIDO: "Já atingiste o número de treinos permitidos esta semana.",
   FREQUENCIA_INVALIDA: "A frequência deve ser 1, 2 ou 3 treinos por semana.",
   PIN_INVALIDO: "PIN incorreto.",
@@ -2467,6 +2467,9 @@ function AtletaDashboard({
   const [showChangeCode, setShowChangeCode] =
     useState(false);
 
+  const [showInfo, setShowInfo] =
+    useState(false);
+
   // Resumo da semana correspondente ao dia
   // selecionado no calendário de marcação — alimenta
   // o aviso junto às turmas do dia.
@@ -2785,7 +2788,7 @@ function AtletaDashboard({
 
     notify(
       "success",
-      `Aula de ${hhmm(template.hora)} marcada com sucesso!`
+      `Treino das ${hhmm(template.hora)} marcado com sucesso!`
     );
 
     await carregarTudo();
@@ -2853,7 +2856,7 @@ function AtletaDashboard({
 
     notify(
       "success",
-      "Marcação cancelada."
+      "Treino desmarcado."
     );
 
     await carregarTudo();
@@ -3071,14 +3074,14 @@ function AtletaDashboard({
       <div>
 
         <div className="font-display text-xl tracking-wide text-zinc-200 mb-3">
-          As minhas aulas marcadas
+          Os meus treinos marcados
         </div>
 
         <div className="divide-y divide-zinc-800 border border-zinc-800 rounded-xl overflow-hidden">
 
           {minhasMarcacoes.length === 0 && (
             <div className="p-4 text-zinc-500 text-sm">
-              Ainda não tens aulas marcadas.
+              Ainda não tens treinos marcados.
             </div>
           )}
 
@@ -3109,7 +3112,7 @@ function AtletaDashboard({
                   <div className="flex items-center gap-3">
 
                     <span className="text-xs font-medium px-2 py-1 rounded-md bg-sky-500/15 text-sky-400">
-                      Aula concluída
+                      Treino concluído
                     </span>
 
                     <button
@@ -3153,17 +3156,62 @@ function AtletaDashboard({
 
       <div>
 
-        <div className="font-display text-xl tracking-wide text-zinc-200 mb-1">
-          Marcar aula
+        <div className="flex items-baseline gap-2 mb-3">
+
+          <div className="font-display text-xl tracking-wide text-zinc-200">
+            Marcar treino
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowInfo((v) => !v)}
+            className="text-xs text-zinc-500 underline hover:text-lime-400"
+          >
+            Info
+          </button>
+
         </div>
 
-        <div className="text-xs text-zinc-500 mb-3">
-          Só podes marcar e desmarcar aulas do mês atual
-          (até {maxBookingDate.getDate()} de{" "}
-          {MESES[maxBookingDate.getMonth()]}).
-          Podes desmarcar até 1 hora antes da aula.
-          Meses anteriores ficam disponíveis apenas para consulta.
-        </div>
+        {showInfo && (
+          <div className="text-xs text-zinc-500 mb-3 space-y-3">
+
+            <div>
+              Só podes marcar e desmarcar treinos do mês atual
+              (até {maxBookingDate.getDate()} de{" "}
+              {MESES[maxBookingDate.getMonth()]}).
+              Podes desmarcar até 1 hora antes do treino.
+              Meses anteriores ficam disponíveis apenas para consulta.
+            </div>
+
+            <div className="space-y-1.5">
+
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                Treino sem vagas
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Treino com vagas
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                Treino marcado
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Star
+                  size={9}
+                  className="text-yellow-400 fill-yellow-400"
+                />
+                Treino realizado
+              </div>
+
+            </div>
+
+          </div>
+        )}
 
         <div className="grid md:grid-cols-[minmax(0,380px)_1fr] gap-5 items-start">
 
@@ -3204,7 +3252,7 @@ function AtletaDashboard({
 
                 if (todasRealizadas) {
 
-                  // Aula(s) já realizada(s) neste dia.
+                  // Treino(s) já realizado(s) neste dia.
                   return (
                     <Star
                       size={9}
@@ -3288,7 +3336,7 @@ function AtletaDashboard({
                       )
                       .map((h, i) => (
                         <li key={i}>
-                          ⭐ Foste à aula das{" "}
+                          ⭐ Foste ao treino das{" "}
                           {hhmm(h.hora)}
                         </li>
                       ))}
@@ -3419,7 +3467,7 @@ function AtletaDashboard({
 
                             <span className="text-sky-400 text-sm flex items-center gap-1">
                               <CheckCircle2 size={16} />
-                              Aula concluída
+                              Treino concluído
                             </span>
 
                           ) : (
@@ -3428,7 +3476,7 @@ function AtletaDashboard({
 
                               <span className="text-emerald-400 text-sm flex items-center gap-1">
                                 <CheckCircle2 size={16} />
-                                Marcada
+                                Marcado
                               </span>
 
                               <button
