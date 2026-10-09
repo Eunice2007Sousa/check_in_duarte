@@ -556,7 +556,7 @@ function MonthCalendar({
             disabled={!canGoPrev}
             className={`p-2 rounded-md border ${
               canGoPrev
-                ? "border-zinc-800 text-zinc-400 hover:text-lime-400 hover:border-lime-400/40"
+                ? "border-zinc-800 text-zinc-400 hover:text-[#72E580] hover:border-[#72E580]/40"
                 : "border-zinc-900 text-zinc-800 cursor-not-allowed"
             }`}
           >
@@ -565,7 +565,7 @@ function MonthCalendar({
 
           <button
             onClick={goToday}
-            className="px-3 py-2 rounded-md border border-zinc-800 text-xs text-zinc-400 hover:text-lime-400"
+            className="px-3 py-2 rounded-md border border-zinc-800 text-xs text-zinc-400 hover:text-[#72E580]"
           >
             Hoje
           </button>
@@ -584,7 +584,7 @@ function MonthCalendar({
             disabled={!canGoNext}
             className={`p-2 rounded-md border ${
               canGoNext
-                ? "border-zinc-800 text-zinc-400 hover:text-lime-400 hover:border-lime-400/40"
+                ? "border-zinc-800 text-zinc-400 hover:text-[#72E580] hover:border-[#72E580]/40"
                 : "border-zinc-900 text-zinc-800 cursor-not-allowed"
             }`}
           >
@@ -634,14 +634,14 @@ function MonthCalendar({
                 }
                 ${
                   isSelected && !disabled
-                    ? "bg-lime-400 text-zinc-950 font-semibold"
+                    ? "bg-[#72E580] text-zinc-950 font-semibold"
                     : disabled
                     ? ""
                     : "hover:bg-zinc-800"
                 }
                 ${
                   isToday && !isSelected
-                    ? "ring-1 ring-lime-400/60"
+                    ? "ring-1 ring-[#72E580]/60"
                     : ""
                 }
               `}
@@ -902,7 +902,7 @@ function OwnerCalendar({ ownerPin }) {
       <span
         className={`w-1.5 h-1.5 rounded-full ${
           alguma
-            ? "bg-lime-400"
+            ? "bg-[#72E580]"
             : "bg-zinc-600"
         }`}
       />
@@ -949,7 +949,7 @@ function OwnerCalendar({ ownerPin }) {
 
               <div className="flex items-center justify-between mb-2">
 
-                <span className="font-mono-id text-lime-400 text-lg">
+                <span className="font-mono-id text-[#72E580] text-lg">
                   {hhmm(t.hora)}
                 </span>
 
@@ -1104,7 +1104,7 @@ function OwnerTurmas({ ownerPin }) {
 
           <button
             onClick={addTemplate}
-            className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 bg-[#72E580] text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-[#60d46f] whitespace-nowrap"
           >
             <Plus size={16} />
             Criar turma
@@ -1147,7 +1147,7 @@ function OwnerTurmas({ ownerPin }) {
                   {DIAS[t.dia_semana]}
                 </span>
 
-                <span className="font-mono-id text-lime-400">
+                <span className="font-mono-id text-[#72E580]">
                   {hhmm(t.hora)}
                 </span>
 
@@ -1376,7 +1376,7 @@ function OwnerAtletas({ ownerPin }) {
 
           <button
             onClick={addAtleta}
-            className="flex items-center justify-center gap-2 bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 bg-[#72E580] text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-[#60d46f] whitespace-nowrap"
           >
             <Plus size={16} />
             Adicionar
@@ -1438,7 +1438,7 @@ function OwnerAtletas({ ownerPin }) {
           setEditingName(a.id);
           setNameDraft(a.nome);
         }}
-        className="text-xs text-zinc-600 hover:text-lime-400 underline"
+        className="text-xs text-zinc-600 hover:text-[#72E580] underline"
       >
         editar
       </button>
@@ -1452,7 +1452,7 @@ function OwnerAtletas({ ownerPin }) {
 </div>
                 <div className="text-xs text-zinc-500">
                   Frequência atual:{" "}
-                  <span className="text-lime-400">
+                  <span className="text-[#72E580]">
                     {a.frequencia_atual} treino
                     {a.frequencia_atual > 1 ? "s" : ""}/semana
                   </span>
@@ -1477,7 +1477,7 @@ function OwnerAtletas({ ownerPin }) {
                             !r[a.id]
                         }))
                       }
-                      className="text-zinc-600 hover:text-lime-400"
+                      className="text-zinc-600 hover:text-[#72E580]"
                     >
                       {revealed[a.id] ? (
                         <EyeOff size={14} />
@@ -1503,7 +1503,7 @@ function OwnerAtletas({ ownerPin }) {
                         onClick={() =>
                           changeFrequencia(a.id, f)
                         }
-                        className="px-3 py-1.5 rounded-md border border-lime-400 text-lime-400 text-xs hover:bg-lime-400 hover:text-zinc-950"
+                        className="px-3 py-1.5 rounded-md border border-[#72E580] text-[#72E580] text-xs hover:bg-[#72E580] hover:text-zinc-950"
                       >
                         {f}
                       </button>
@@ -1526,7 +1526,7 @@ function OwnerAtletas({ ownerPin }) {
                     onClick={() =>
                       setEditingFreq(a.id)
                     }
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-800 text-zinc-400 text-xs hover:text-lime-400 hover:border-lime-400/40"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-800 text-zinc-400 text-xs hover:text-[#72E580] hover:border-[#72E580]/40"
                   >
                     <PackageCheck size={14} />
                     Alterar frequência
@@ -1629,7 +1629,7 @@ function OwnerSettings({
 
         <button
           onClick={savePin}
-          className="bg-lime-400 text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-lime-300"
+          className="bg-[#72E580] text-zinc-950 rounded-md px-4 py-2 text-sm font-medium hover:bg-[#60d46f]"
         >
           Guardar
         </button>
@@ -2940,7 +2940,7 @@ function AtletaDashboard({
           {resumoSemanaAtual && (
             <div className="text-sm text-zinc-500 mt-0.5">
               Plano atual:{" "}
-              <span className="text-lime-400 font-medium">
+              <span className="text-[#72E580] font-medium">
                 {resumoSemanaAtual.frequencia} treino
                 {resumoSemanaAtual.frequencia > 1 ? "s" : ""} por semana
               </span>
@@ -2957,7 +2957,7 @@ function AtletaDashboard({
                 (v) => !v
               )
             }
-            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-lime-400"
+            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-[#72E580]"
           >
             <Settings size={16} />
             Código
@@ -2965,7 +2965,7 @@ function AtletaDashboard({
 
           <button
             onClick={onSwitch}
-            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-lime-400"
+            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-[#72E580]"
           >
             <ArrowLeft size={16} />
             Sair
@@ -3102,7 +3102,7 @@ function AtletaDashboard({
                 <span className="text-zinc-300">
                   {b.data} —{" "}
                   {DIAS[b.dia_semana]} às{" "}
-                  <span className="font-mono-id text-lime-400">
+                  <span className="font-mono-id text-[#72E580]">
                     {hhmm(b.hora)}
                   </span>
                 </span>
@@ -3122,7 +3122,7 @@ function AtletaDashboard({
                           b.booking_id
                         )
                       }
-                      className="text-xs text-zinc-500 hover:text-lime-400 underline"
+                      className="text-xs text-zinc-500 hover:text-[#72E580] underline"
                     >
                       Descartar
                     </button>
@@ -3165,7 +3165,7 @@ function AtletaDashboard({
           <button
             type="button"
             onClick={() => setShowInfo((v) => !v)}
-            className="text-xs text-zinc-500 underline hover:text-lime-400"
+            className="text-xs text-zinc-500 underline hover:text-[#72E580]"
           >
             Info
           </button>
@@ -3431,7 +3431,7 @@ function AtletaDashboard({
 
                         <div className="flex items-center gap-3">
 
-                          <span className="font-mono-id text-lime-400 text-lg">
+                          <span className="font-mono-id text-[#72E580] text-lg">
                             {hhmm(t.hora)}
                           </span>
 
@@ -3515,7 +3515,7 @@ function AtletaDashboard({
                             className={`px-4 py-2 rounded-md text-sm font-medium ${
                               cheio || bloqueadoPelaSemana || busy
                                 ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
-                                : "bg-lime-400 text-zinc-950 hover:bg-lime-300"
+                                : "bg-[#72E580] text-zinc-950 hover:bg-[#60d46f]"
                             }`}
                           >
                             {cheio
