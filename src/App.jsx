@@ -176,6 +176,20 @@ function AuthBackground({ children }) {
   );
 }
 
+const KEYPAD_GRID = "grid grid-cols-3 gap-2.5 w-full max-w-[15rem]";
+const KEY_BASE = "aspect-square rounded-2xl backdrop-blur-md border text-xl font-mono-id active:scale-95 transition-all shadow-lg shadow-black/30";
+const KEY_NUM = `${KEY_BASE} bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-[#72E580]/60 hover:text-[#72E580] disabled:opacity-40`;
+const KEY_ICON = `${KEY_BASE} flex items-center justify-center bg-white/10 border-white/20 text-zinc-300 hover:text-rose-400 disabled:opacity-40`;
+const keyOk = (enabled) =>
+  `${KEY_BASE} flex items-center justify-center ${
+    enabled
+      ? "bg-[#72E580]/80 border-[#72E580]/40 text-zinc-950 hover:bg-[#72E580]"
+      : "bg-white/5 border-white/10 text-white/30 cursor-not-allowed"
+  }`;
+
+
+
+
 /* ============================================================
    APP
 ============================================================ */
@@ -377,14 +391,14 @@ function PinGate({
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+      <div className={KEYPAD_GRID}>
 
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
           <button
             key={n}
             disabled={checking}
             onClick={() => press(String(n))}
-            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] active:scale-95 disabled:opacity-40 transition-colors"
+            className={KEY_NUM}
           >
             {n}
           </button>
@@ -396,7 +410,7 @@ function PinGate({
             setDigits("");
             setError("");
           }}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 disabled:opacity-40 transition-colors"
+          className={KEY_ICON}
         >
           <Ban size={20} />
         </button>
@@ -404,7 +418,7 @@ function PinGate({
         <button
           disabled={checking}
           onClick={() => press("0")}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] active:scale-95 disabled:opacity-40 transition-colors"
+          className={KEY_NUM}
         >
           0
         </button>
@@ -1998,13 +2012,13 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
       {checking && <div className="text-zinc-500 text-xs">A verificar…</div>}
       {error && <div className="text-rose-400 text-sm">{error}</div>}
 
-      <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+      <div className={KEYPAD_GRID}>
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
           <button
             key={n}
             disabled={checking}
             onClick={() => press(String(n))}
-            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] active:scale-95 disabled:opacity-40 transition-colors"
+            className={KEY_NUM}
           >
             {n}
           </button>
@@ -2013,7 +2027,7 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
         <button
           disabled={checking}
           onClick={clearAll}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 transition-colors"
+          className={KEY_ICON}
         >
           <Ban size={20} />
         </button>
@@ -2021,7 +2035,7 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
         <button
           disabled={checking}
           onClick={() => press("0")}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] transition-colors"
+          className={KEY_NUM}
         >
           0
         </button>
@@ -2029,11 +2043,7 @@ function AtletaIdEntry({ onFound, onSelectDuarte }) {
         <button
           onClick={submit}
           disabled={!digits || checking}
-          className={`aspect-square rounded-xl flex items-center justify-center font-medium transition-all ${
-            digits && !checking
-              ? "bg-[#72E580] text-zinc-950 hover:bg-[#60d46f] active:scale-95"
-              : "bg-zinc-900 border border-zinc-800 text-zinc-700 cursor-not-allowed"
-          }`}
+          className={keyOk(Boolean(digits) && !checking)}
         >
           <CheckCircle2 size={22} />
         </button>
@@ -2212,13 +2222,13 @@ function AtletaFirstCode({
       )}
 
       {/* Teclado Numérico */}
-      <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+      <div className={KEYPAD_GRID}>
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
           <button
             key={n}
             disabled={saving}
             onClick={() => press(String(n))}
-            className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] active:scale-95 disabled:opacity-40 transition-colors"
+            className={KEY_NUM}
           >
             {n}
           </button>
@@ -2227,7 +2237,7 @@ function AtletaFirstCode({
         <button
           disabled={saving}
           onClick={clear}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-rose-400 transition-colors"
+          className={KEY_ICON}
         >
           <Ban size={20} />
         </button>
@@ -2235,7 +2245,7 @@ function AtletaFirstCode({
         <button
           disabled={saving}
           onClick={() => press("0")}
-          className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800 text-2xl font-mono-id hover:border-[#72E580]/50 hover:text-[#72E580] transition-colors"
+          className={KEY_NUM}
         >
           0
         </button>
@@ -2243,11 +2253,7 @@ function AtletaFirstCode({
         <button
           onClick={confirmCode}
           disabled={digits.length !== CODE_LEN || saving}
-          className={`aspect-square rounded-xl flex items-center justify-center transition-all ${
-            digits.length === CODE_LEN && !saving
-              ? "bg-[#72E580] text-zinc-950 hover:bg-[#60d46f] active:scale-95"
-              : "bg-zinc-900 border border-zinc-800 text-zinc-700 cursor-not-allowed"
-          }`}
+          className={keyOk(digits.length === CODE_LEN && !saving)}
         >
           <CheckCircle2 size={22} />
         </button>
