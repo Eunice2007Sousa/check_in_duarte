@@ -161,6 +161,21 @@ function friendlyError(error) {
     : "Erro de ligação. Verifica a internet e tenta novamente.";
 }
 
+
+//Função de BackGround do id e do código
+function AuthBackground({ children }) {
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center"
+        style={{ backgroundImage: "url(/gym-bg.jpg)" }}
+      />
+      <div className="fixed inset-0 z-0 bg-gradient-to-b from-zinc-950/50 via-zinc-950/30 to-zinc-950/90" />
+      <div className="relative z-10">{children}</div>
+    </>
+  );
+}
+
 /* ============================================================
    APP
 ============================================================ */
@@ -220,23 +235,25 @@ export default function App() {
             onPinChanged={setOwnerPin}
           />
         ) : (
-          <PinGate
-            title="ID - 0"
-            label="Insere o teu PIN para acesso à tua área"
-            onBack={() => setRole("atleta")}
-            verify={async (digits) => {
-  const { data, error } = await supabase.rpc("fn_verificar_owner", {
-    p_pin: digits
-  });
+          <AuthBackground>
+            <PinGate
+              title="ID - 0"
+              label="Insere o teu PIN para acesso à tua área"
+              onBack={() => setRole("atleta")}
+              verify={async (digits) => {
+                const { data, error } = await supabase.rpc("fn_verificar_owner", {
+                  p_pin: digits
+                });
 
-  if (error) throw error;
+                if (error) throw error;
 
-  return data === true ? digits : null;
-}}
-            onSuccess={(pin) => {
-              setOwnerPin(pin);
-            }}
-          />
+                return data === true ? digits : null;
+              }}
+              onSuccess={(pin) => {
+                setOwnerPin(pin);
+              }}
+            />
+          </AuthBackground>
         )
       ) : (
         <AtletaArea onSelectDuarte={() => setRole("dono")} />
@@ -245,7 +262,6 @@ export default function App() {
     </div>
   );
 }
-
 /* ============================================================
    PIN KEYPAD
 ============================================================ */
@@ -1833,63 +1849,46 @@ function AtletaArea({ onSelectDuarte }) {
     setCandidate(atletaData);
   };
 
-  if (!session) {
-
-    if (!candidate) {
-      return (
-        <AtletaIdEntry
-          onFound={handleFoundCandidate}
-          onSelectDuarte={onSelectDuarte}
-        />
-      );
-    }
-
-    /*
-      PRIMEIRA VEZ:
-      o atleta ainda não tem código.
-    */
-    if (!candidate.tem_codigo) {
-      return (
-        <AtletaFirstCode
-          candidate={candidate}
-          onSuccess={setSession}
-          onBack={() => setCandidate(null)}
-        />
-      );
-    }
-
-    /*
-      JÁ TEM CÓDIGO:
-      login normal.
-    */
+   if (!session) {
     return (
-      <PinGate
-        title={`ID - ${candidate.numero_id}`}
-        label="Insere o teu PIN para acesso à tua área"
-        verify={async (digits) => {
+      <AuthBackground>
+        {!candidate ? (
+          <AtletaIdEntry
+            onFound={handleFoundCandidate}
+            onSelectDuarte={onSelectDuarte}
+          />
+        ) : !candidate.tem_codigo ? (
+          <AtletaFirstCode
+            candidate={candidate}
+            onSuccess={setSession}
+            onBack={() => setCandidate(null)}
+          />
+        ) : (
+          <PinGate
+            title={`ID - ${candidate.numero_id}`}
+            label="Insere o teu PIN para acesso à tua área"
+            verify={async (digits) => {
+              const { data, error } = await supabase.rpc("fn_login_atleta", {
+                p_numero_id: candidate.numero_id,
+                p_codigo: digits
+              });
 
-          const { data, error } = await supabase.rpc(
-            "fn_login_atleta",
-            {
-              p_numero_id: candidate.numero_id,
-              p_codigo: digits
-            }
-          );
+              if (error) throw error;
 
-          if (error) throw error;
+              if (!data || data.length === 0) {
+                return null;
+              }
 
-          if (!data || data.length === 0) {
-            return null;
-          }
-
-          return {
-            ...data[0],
-            codigo: digits
-          };
-        }}
-        onSuccess={setSession}
-        onBack={() => setCandidate(null)}
-      />
+              return {
+                ...data[0],
+                codigo: digits
+              };
+            }}
+            onSuccess={setSession}
+            onBack={() => setCandidate(null)}
+          />
+        )}
+      </AuthBackground>
     );
   }
 
