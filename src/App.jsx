@@ -162,6 +162,12 @@ function friendlyError(error) {
 }
 
 
+// "HELENA" / "helena" -> "Helena"
+function primeiroNome(nome) {
+  const n = String(nome || "").trim();
+  return n ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : "";
+}
+
 //Função de BackGround do id e do código
 function AuthBackground({ children }) {
   return (
@@ -667,6 +673,10 @@ function OwnerArea({ ownerPin, onPinChanged }) {
 
   return (
     <main className="px-6 py-8 max-w-4xl w-full mx-auto">
+
+      <div className="font-display text-2xl tracking-wide text-zinc-100 mb-5">
+        Olá, Duarte 👋
+      </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
 
@@ -2919,20 +2929,17 @@ function AtletaDashboard({
         <div>
 
           <div className="font-display text-2xl tracking-wide text-zinc-100">
-            {session.nome}
+            Olá, {primeiroNome(session.nome)} 👋
           </div>
 
-          {/* INFORMAÇÃO FIXA DO PLANO — o único elemento que
-              fica no topo, sempre visível e sempre igual
+          {/* INFORMAÇÃO FIXA DO PLANO — sempre visível e igual
               independentemente do dia selecionado no calendário. */}
           {resumoSemanaAtual && (
             <div className="text-sm text-zinc-500 mt-0.5">
               Plano atual:{" "}
               <span className="text-lime-400 font-medium">
                 {resumoSemanaAtual.frequencia} treino
-                {resumoSemanaAtual.frequencia > 1 ? "s" : ""} disponíve
-                {resumoSemanaAtual.frequencia > 1 ? "is" : "l"} a realizar
-                por semana
+                {resumoSemanaAtual.frequencia > 1 ? "s" : ""} por semana
               </span>
             </div>
           )}
