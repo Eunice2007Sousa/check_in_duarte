@@ -3007,6 +3007,65 @@ function AtletaDashboard({
         </div>
       )}
 
+      {/* O TEU PRÓXIMO TREINO */}
+
+      {(() => {
+        const agora = lisbonNow();
+
+        const proximo = [...minhasMarcacoes]
+          .filter((b) => classDateTime(b.data, b.hora) > agora)
+          .sort(
+            (a, b) =>
+              classDateTime(a.data, a.hora) -
+              classDateTime(b.data, b.hora)
+          )[0];
+
+        const dataProx = proximo
+          ? (() => {
+              const [y, m, d] = proximo.data.split("-").map(Number);
+              return `${d} de ${MESES[m - 1]} de ${y}`;
+            })()
+          : null;
+
+        return (
+          <div className="relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+
+            <div
+              className="absolute inset-y-0 right-0 w-3/5 bg-cover bg-center"
+              style={{ backgroundImage: "url(/treino-card.jpg)" }}
+            />
+            <div className="absolute inset-y-0 right-0 w-3/5 bg-gradient-to-r from-zinc-900 via-zinc-900/60 to-zinc-950/30" />
+
+            <div className="relative z-10 p-5 min-h-[7.5rem]">
+
+              <div className="font-display text-xl tracking-wide text-[#72E580] mb-3">
+                O TEU PRÓXIMO TREINO
+              </div>
+
+              {proximo ? (
+                <>
+                  <div className="flex items-center gap-2 text-lg font-semibold text-zinc-100">
+                    <span>📅</span>
+                    <span>
+                      {DIAS[proximo.dia_semana]} · {hhmm(proximo.hora)}
+                    </span>
+                  </div>
+
+                  <div className="text-sm text-zinc-400 mt-1 pl-8">
+                    {dataProx}
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-zinc-400 max-w-[55%]">
+                  Ainda não tens treinos marcados.
+                </div>
+              )}
+
+            </div>
+          </div>
+        );
+      })()}
+
       {/* MINHAS AULAS */}
 
       <div>
