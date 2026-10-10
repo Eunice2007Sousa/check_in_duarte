@@ -174,9 +174,9 @@ function HeaderLogo() {
     <div className="flex flex-col items-center leading-none">
       <div className="flex items-center gap-1.5 text-white font-bold text-xl tracking-wider">
         <span>TURN</span>
-        <div className="flex items-center gap-1 border border-white rounded-full px-2 py-0.5 text-[0.65rem] font-extrabold">
+        <div className="flex items-center gap-1.5 h-[22px] border-[1.5px] border-white rounded-full pl-2 pr-1 text-[0.62rem] leading-none font-bold tracking-wide">
           <span>ON</span>
-          <span className="w-2.5 h-2.5 bg-white rounded-full inline-block"></span>
+          <span className="w-3.5 h-3.5 bg-white rounded-full inline-block"></span>
         </div>
       </div>
       <span className="text-[0.55rem] tracking-[0.4em] text-white font-light mt-1 w-full text-center">
