@@ -1304,7 +1304,8 @@ function OwnerAtletas({ ownerPin }) {
   };
 
   // Substitui o antigo "assignPack": agora altera a
-  // frequência semanal do atleta para o mês atual.
+  // frequência semanal do atleta, que só entra em vigor
+  // no mês seguinte.
   const changeFrequencia = async (
     id,
     frequencia
@@ -1370,7 +1371,8 @@ function OwnerAtletas({ ownerPin }) {
           de 4 dígitos na primeira utilização. A
           frequência escolhida abaixo aplica-se ao
           mês atual e será herdada automaticamente
-          nos meses seguintes até seres tu a alterá-la.
+          nos meses seguintes. Alterações posteriores
+          só entram em vigor no mês seguinte.
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -1484,6 +1486,16 @@ function OwnerAtletas({ ownerPin }) {
                   </span>
                 </div>
 
+                {a.frequencia_proxima != null && (
+                  <div className="text-xs text-zinc-500 mt-0.5">
+                    No próximo mês:{" "}
+                    <span className="text-[#72E580]">
+                      {a.frequencia_proxima} treino
+                      {a.frequencia_proxima > 1 ? "s" : ""}/semana
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2 mt-2">
 
                   <span className="font-mono-id text-xs text-zinc-400 tracking-widest">
@@ -1555,7 +1567,7 @@ function OwnerAtletas({ ownerPin }) {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-800 text-zinc-400 text-xs hover:text-[#72E580] hover:border-[#72E580]/40"
                   >
                     <PackageCheck size={14} />
-                    Alterar frequência
+                    Alterar (próximo mês)
                   </button>
 
                 )}
@@ -2504,6 +2516,14 @@ function AtletaDashboard({
   const [showInfo, setShowInfo] =
     useState(false);
 
+  // Frequência já definida pelo Duarte para o mês seguinte
+  // (null se não houver alteração pendente) + toggle da nota.
+  const [freqProximoMes, setFreqProximoMes] =
+    useState(null);
+
+  const [showFreqInfo, setShowFreqInfo] =
+    useState(false);
+
   // Resumo da semana correspondente ao dia
   // selecionado no calendário de marcação — alimenta
   // o aviso junto às turmas do dia.
@@ -2658,6 +2678,63 @@ function AtletaDashboard({
     );
 
   }, [fetchResumoSemana]);
+
+  // Alteração de frequência pendente para o mês seguinte.
+  useEffect(() => {
+
+    if (!resumoSemanaAtual) return;
+
+    let cancelado = false;
+
+    (async () => {
+
+      const { data, error } = await supabase.rpc(
+        "fn_minhas_frequencias",
+        {
+          p_numero_id: session.numero_id,
+          p_codigo: session.codigo
+        }
+      );
+
+      if (cancelado || error || !data) return;
+
+      const agora = new Date();
+      const proximo = new Date(
+        agora.getFullYear(),
+        agora.getMonth() + 1,
+        1
+      );
+      const proximoIso =
+        proximo.getFullYear() +
+        "-" +
+        String(proximo.getMonth() + 1).padStart(2, "0") +
+        "-01";
+
+      const linha = data.find(
+        (r) => String(r.mes).slice(0, 10) === proximoIso
+      );
+
+      if (
+        linha &&
+        linha.treinos_semana !== resumoSemanaAtual.frequencia
+      ) {
+        setFreqProximoMes(linha.treinos_semana);
+      } else {
+        setFreqProximoMes(null);
+        setShowFreqInfo(false);
+      }
+
+    })();
+
+    return () => {
+      cancelado = true;
+    };
+
+  }, [
+    resumoSemanaAtual,
+    session.numero_id,
+    session.codigo
+  ]);
 
   // Resumo da semana do dia selecionado no calendário.
   useEffect(() => {
@@ -2978,6 +3055,25 @@ function AtletaDashboard({
                 {resumoSemanaAtual.frequencia} treino
                 {resumoSemanaAtual.frequencia > 1 ? "s" : ""} por semana
               </span>
+
+              {freqProximoMes != null && (
+                <button
+                  onClick={() =>
+                    setShowFreqInfo((v) => !v)
+                  }
+                  className="ml-2 text-xs underline text-zinc-500 hover:text-zinc-300"
+                >
+                  Info
+                </button>
+              )}
+            </div>
+          )}
+
+          {freqProximoMes != null && showFreqInfo && (
+            <div className="text-xs text-zinc-400 mt-1">
+              No próximo mês, frequência alterada para{" "}
+              {freqProximoMes} treino
+              {freqProximoMes > 1 ? "s" : ""}
             </div>
           )}
 
