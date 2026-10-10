@@ -168,6 +168,24 @@ function primeiroNome(nome) {
   return n ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : "";
 }
 
+// Logótipo só com as letras (igual ao do ecrã de entrada), em tamanho de cabeçalho.
+function HeaderLogo() {
+  return (
+    <div className="flex flex-col items-center leading-none">
+      <div className="flex items-center gap-1.5 text-white font-bold text-xl tracking-wider">
+        <span>TURN</span>
+        <div className="flex items-center gap-1 border border-white rounded-full px-2 py-0.5 text-[0.65rem] font-extrabold">
+          <span>ON</span>
+          <span className="w-2.5 h-2.5 bg-white rounded-full inline-block"></span>
+        </div>
+      </div>
+      <span className="text-[0.55rem] tracking-[0.4em] text-white font-light mt-1 w-full text-center">
+        FITNESS
+      </span>
+    </div>
+  );
+}
+
 //Função de BackGround do id e do código
 function AuthBackground({ children }) {
   return (
@@ -203,6 +221,7 @@ const keyOk = (enabled) =>
 export default function App() {
   const [role, setRole] = useState("atleta");
   const [ownerPin, setOwnerPin] = useState(null);
+  const [atletaLogado, setAtletaLogado] = useState(false);
 
   const logoutDuarte = () => {
     setOwnerPin(null);
@@ -235,7 +254,11 @@ export default function App() {
 
       {/* Header com botão de sair quando o Duarte está logado */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-        <div></div>
+        {(role === "dono" && ownerPin) || (role !== "dono" && atletaLogado) ? (
+          <HeaderLogo />
+        ) : (
+          <div></div>
+        )}
 
         {role === "dono" && ownerPin && (
           <button
@@ -276,7 +299,10 @@ export default function App() {
           </AuthBackground>
         )
       ) : (
-        <AtletaArea onSelectDuarte={() => setRole("dono")} />
+        <AtletaArea
+          onSelectDuarte={() => setRole("dono")}
+          onSessionChange={setAtletaLogado}
+        />
       )}
 
     </div>
@@ -1857,10 +1883,18 @@ function OwnerAuditLog({ ownerPin }) {
    ÁREA DO ATLETA
 ============================================================ */
 
-function AtletaArea({ onSelectDuarte }) {
+function AtletaArea({ onSelectDuarte, onSessionChange }) {
 
   const [candidate, setCandidate] = useState(null);
   const [session, setSession] = useState(null);
+
+  // Avisa o App se há atleta com sessão iniciada (para mostrar o logo no cabeçalho).
+  useEffect(() => {
+    if (onSessionChange) onSessionChange(Boolean(session));
+    return () => {
+      if (onSessionChange) onSessionChange(false);
+    };
+  }, [session]);
 
   // Interceção para detetar o Duarte (ID 0)
   const handleFoundCandidate = (atletaData) => {
