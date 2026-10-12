@@ -4,7 +4,7 @@ import OwnerExcecoes from "./OwnerExcecoes";
 import {
   Dumbbell, Plus, Trash2, Users, CalendarDays, LayoutGrid, ChevronLeft, ChevronRight,
   ArrowLeft, KeyRound, CheckCircle2, XCircle, Ban, PackageCheck, Lock, Eye, EyeOff,
-  Settings, Star, ClipboardList, AlertTriangle, Gift,
+  Settings, Star, ClipboardList, AlertTriangle, Gift
 } from "lucide-react";
 
 const DIAS = [
