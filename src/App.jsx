@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, supabaseConfigured } from "./supabaseClient";
-import OwnerExcecoes from "./OwnerExcecoes";
 import {
   Dumbbell, Plus, Trash2, Users, CalendarDays, LayoutGrid, ChevronLeft, ChevronRight,
   ArrowLeft, KeyRound, CheckCircle2, XCircle, Ban, PackageCheck, Lock, Eye, EyeOff,
-  Settings, Star, ClipboardList, AlertTriangle, Gift
+  Settings, Star, ClipboardList, AlertTriangle
 } from "lucide-react";
 
 const DIAS = [
@@ -146,8 +145,6 @@ const ERROR_MESSAGES = {
   CODIGOS_NAO_IGUAIS: "Os códigos não coincidem.",
   CODIGO_JA_DEFINIDO: "Este atleta já tem um código definido.",
   NOME_INVALIDO: "O nome não pode estar vazio.",
-  BONUS_QUANTIDADE_INVALIDA: "A quantidade de treinos bónus deve estar entre 1 e 20.",
-  BONUS_DATAS_INVALIDAS: "O intervalo de datas é inválido.",
 };
 
 function friendlyError(error) {
@@ -731,13 +728,6 @@ function OwnerArea({ ownerPin, onPinChanged }) {
         />
 
         <TabButton
-          icon={Gift}
-          label="Exceções"
-          active={tab === "excecoes"}
-          onClick={() => setTab("excecoes")}
-        />
-
-        <TabButton
           icon={Settings}
           label="Definições"
           active={tab === "definicoes"}
@@ -763,10 +753,6 @@ function OwnerArea({ ownerPin, onPinChanged }) {
 
       {tab === "atletas" && (
         <OwnerAtletas ownerPin={ownerPin} />
-      )}
-
-      {tab === "excecoes" && (
-        <OwnerExcecoes ownerPin={ownerPin} />
       )}
 
       {tab === "definicoes" && (
@@ -1727,16 +1713,6 @@ const ACTION_LABELS = {
   alteracao_frequencia: {
     label: "Frequência alterada",
     color: "bg-sky-500/15 text-sky-400"
-  },
-
-  bonus_atribuido: {
-    label: "Bónus atribuído",
-    color: "bg-violet-500/15 text-violet-400"
-  },
-
-  bonus_removido: {
-    label: "Bónus removido",
-    color: "bg-zinc-700/40 text-zinc-300"
   }
 };
 
@@ -1822,7 +1798,7 @@ function OwnerAuditLog({ ownerPin }) {
         </div>
 
         <div className="text-xs text-zinc-500">
-          Mostra marcações, desmarcações, tentativas bloqueadas, alterações de frequência e bónus no último mês.
+          Mostra marcações, desmarcações, tentativas bloqueadas e alterações de frequência no último mês.
         </div>
 
         <select
@@ -2548,10 +2524,6 @@ function AtletaDashboard({
   const [showFreqInfo, setShowFreqInfo] =
     useState(false);
 
-  // Treinos bónus ativos (dados pelo Duarte) com treinos por usar.
-  const [bonus, setBonus] =
-    useState([]);
-
   // Resumo da semana correspondente ao dia
   // selecionado no calendário de marcação — alimenta
   // o aviso junto às turmas do dia.
@@ -2618,29 +2590,6 @@ function AtletaDashboard({
     },
     [session.numero_id, session.codigo]
   );
-
-  const carregarBonus = useCallback(
-    async () => {
-
-      const { data } =
-        await supabase.rpc(
-          "fn_meus_bonus",
-          {
-            p_numero_id:
-              session.numero_id,
-            p_codigo:
-              session.codigo
-          }
-        );
-
-      setBonus(data || []);
-    },
-    [session.numero_id, session.codigo]
-  );
-
-  useEffect(() => {
-    carregarBonus();
-  }, [carregarBonus]);
 
   const carregarTudo =
     useCallback(async () => {
@@ -2913,8 +2862,6 @@ function AtletaDashboard({
 
     setResumoSemanaAtual(atual);
     setResumoSemanaSelecionada(selecionada);
-
-    await carregarBonus();
   };
 
   const book = async (
@@ -3086,15 +3033,6 @@ function AtletaDashboard({
     !!resumoSemanaSelecionada &&
     resumoSemanaSelecionada.disponiveis <= 0;
 
-  // Existe algum treino bónus utilizável no dia selecionado?
-  const temBonusNesteDia =
-    bonus.some(
-      (b) =>
-        iso >= b.data_inicio &&
-        iso <= b.data_fim &&
-        b.restantes > 0
-    );
-
   return (
     <main className="px-6 py-8 max-w-3xl w-full mx-auto space-y-6">
 
@@ -3138,24 +3076,6 @@ function AtletaDashboard({
               {freqProximoMes > 1 ? "s" : ""}
             </div>
           )}
-
-          {/* TREINOS BÓNUS — debaixo do plano atual */}
-          {bonus.map((b) => (
-            <div
-              key={b.bonus_id}
-              className="text-sm text-zinc-500 mt-0.5 flex items-center gap-1.5"
-            >
-              <Gift size={13} className="text-[#72E580]" />
-              <span>
-                <span className="text-[#72E580] font-medium">
-                  {b.restantes} treino
-                  {b.restantes > 1 ? "s" : ""} bónus
-                </span>{" "}
-                ({formatDiaMes(b.data_inicio)} a{" "}
-                {formatDiaMes(b.data_fim)})
-              </span>
-            </div>
-          ))}
 
         </div>
 
@@ -3570,7 +3490,7 @@ function AtletaDashboard({
                 {resumoSemanaSelecionada && (
                   <div
                     className={`text-xs rounded-lg px-3 py-2 border ${
-                      semanaSelecionadaCheia && !temBonusNesteDia
+                      semanaSelecionadaCheia
                         ? "border-rose-500/40 bg-rose-500/10 text-rose-400"
                         : "border-zinc-800 bg-zinc-900 text-zinc-400"
                     }`}
@@ -3581,9 +3501,7 @@ function AtletaDashboard({
                     {resumoSemanaSelecionada.usados}/
                     {resumoSemanaSelecionada.frequencia} treinos usados
                     {semanaSelecionadaCheia
-                      ? temBonusNesteDia
-                        ? " — limite semanal atingido, mas podes usar um treino bónus."
-                        : " — limite semanal atingido."
+                      ? " — limite semanal atingido."
                       : ` — ${resumoSemanaSelecionada.disponiveis} disponíve${
                           resumoSemanaSelecionada.disponiveis === 1 ? "l" : "is"
                         }.`}
@@ -3629,13 +3547,7 @@ function AtletaDashboard({
 
                     const bloqueadoPelaSemana =
                       !minhaMarcacao &&
-                      semanaSelecionadaCheia &&
-                      !temBonusNesteDia;
-
-                    const usaBonus =
-                      !minhaMarcacao &&
-                      semanaSelecionadaCheia &&
-                      temBonusNesteDia;
+                      semanaSelecionadaCheia;
 
                     return (
                       <div
@@ -3665,8 +3577,6 @@ function AtletaDashboard({
                               className={`text-xs font-medium px-2 py-1 rounded-md ${
                                 cheio || bloqueadoPelaSemana
                                   ? "bg-rose-500/15 text-rose-400"
-                                  : usaBonus
-                                  ? "bg-violet-500/15 text-violet-400"
                                   : "bg-emerald-500/15 text-emerald-400"
                               }`}
                             >
@@ -3674,8 +3584,6 @@ function AtletaDashboard({
                                 ? "Turma completa"
                                 : bloqueadoPelaSemana
                                 ? "Limite semanal atingido"
-                                : usaBonus
-                                ? "Treino bónus"
                                 : "Vaga disponível"}
                             </span>
 
@@ -3744,8 +3652,6 @@ function AtletaDashboard({
                               ? "Turma completa"
                               : bloqueadoPelaSemana
                               ? "Sem vagas esta semana"
-                              : usaBonus
-                              ? "Marcar (bónus)"
                               : "Marcar"}
                           </button>
 
