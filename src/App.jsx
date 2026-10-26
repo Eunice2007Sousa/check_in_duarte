@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, supabaseConfigured } from "./supabaseClient";
+import PushToggle from "./PushToggle";
+import OwnerComunicados from "./OwnerComunicados";
 import {
   Dumbbell, Plus, Trash2, Users, CalendarDays, LayoutGrid, ChevronLeft, ChevronRight,
   ArrowLeft, KeyRound, CheckCircle2, XCircle, Ban, PackageCheck, Lock, Eye, EyeOff,
-  Settings, Star, ClipboardList, AlertTriangle
+  Settings, Star, ClipboardList, AlertTriangle, Megaphone
 } from "lucide-react";
 
 const DIAS = [
@@ -741,6 +743,13 @@ function OwnerArea({ ownerPin, onPinChanged }) {
           onClick={() => setTab("auditoria")}
         />
 
+        <TabButton
+          icon={Megaphone}
+          label="Comunicados"
+          active={tab === "comunicados"}
+          onClick={() => setTab("comunicados")}
+        />
+        
       </div>
 
       {tab === "calendario" && (
@@ -764,6 +773,10 @@ function OwnerArea({ ownerPin, onPinChanged }) {
 
       {tab === "auditoria" && (
         <OwnerAuditLog ownerPin={ownerPin} />
+      )}
+
+      {tab === "comunicados" && (
+        <OwnerComunicados ownerPin={ownerPin} />
       )}
 
     </main>
@@ -1069,22 +1082,32 @@ function OwnerTurmas({ ownerPin }) {
 
   const removeTemplate = async (id) => {
 
-    const { error } =
-      await supabase.rpc(
-        "fn_remover_turma",
-        {
-          p_owner_pin: ownerPin,
-          p_turma_id: id
-        }
-      );
+    const confirmar = window.confirm(
+  "Os atletas com treinos marcados nesta turma serão avisados. Remover?"
+);
 
-    if (error) {
-      return setError(
-        friendlyError(error)
-      );
+if (!confirmar) return;
+
+const { error } =
+  await supabase.rpc(
+    "fn_remover_turma",
+    {
+      p_owner_pin: ownerPin,
+      p_turma_id: id
     }
+  );
 
-    carregar();
+if (error) {
+  return setError(
+    friendlyError(error)
+  );
+}
+
+supabase.functions
+  .invoke("send-push", { body: { owner_pin: ownerPin } })
+  .catch(() => {});
+
+carregar();
   };
 
   return (
@@ -3123,6 +3146,8 @@ function AtletaDashboard({
           }
         />
       )}
+
+      <PushToggle session={session} />
 
       {feedback && (
         <div
