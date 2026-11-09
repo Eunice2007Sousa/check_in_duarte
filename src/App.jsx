@@ -147,6 +147,7 @@ const ERROR_MESSAGES = {
   CODIGOS_NAO_IGUAIS: "Os códigos não coincidem.",
   CODIGO_JA_DEFINIDO: "Este atleta já tem um código definido.",
   NOME_INVALIDO: "O nome não pode estar vazio.",
+  AULA_CANCELADA: "Este treino foi cancelado pelo Duarte.",
 };
 
 function friendlyError(error) {
@@ -817,6 +818,9 @@ function OwnerCalendar({ ownerPin }) {
   const [resumoMes, setResumoMes] = useState([]);
   const [inscritosPorTurma, setInscritosPorTurma] = useState({});
   const [loading, setLoading] = useState(false);
+  const [canceladas, setCanceladas] = useState({});
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [erroCancel, setErroCancel] = useState("");
 
   const iso = isoDate(date);
 
@@ -876,12 +880,18 @@ function OwnerCalendar({ ownerPin }) {
 
     if (templatesHoje.length === 0) {
       setInscritosPorTurma({});
+      setCanceladas({});
       return;
     }
 
     (async () => {
 
       setLoading(true);
+
+      const { data: canc } = await supabase.rpc(
+        "fn_listar_cancelamentos",
+        { p_desde: iso, p_ate: iso }
+      );
 
       const results = await Promise.all(
         templatesHoje.map((t) =>
@@ -905,6 +915,12 @@ function OwnerCalendar({ ownerPin }) {
           results[i].data || [];
       });
 
+      const cmap = {};
+      (canc || []).forEach((c) => {
+        cmap[c.turma_id] = true;
+      });
+
+      setCanceladas(cmap);
       setInscritosPorTurma(map);
       setLoading(false);
 
@@ -917,8 +933,70 @@ function OwnerCalendar({ ownerPin }) {
   }, [
     iso,
     turmas.length,
-    ownerPin
+    ownerPin,
+    refreshKey
   ]);
+
+  const cancelarAula = async (t) => {
+
+    setErroCancel("");
+
+    const n =
+      (inscritosPorTurma[t.id] || []).length;
+
+    const confirmar = window.confirm(
+      `Cancelar o treino das ${hhmm(t.hora)} do dia ${iso
+        .split("-")
+        .reverse()
+        .slice(0, 2)
+        .join("/")}? ` +
+        (n > 0
+          ? `Os ${n} atleta(s) inscritos serão avisados e as marcações removidas.`
+          : "Ninguém está inscrito.")
+    );
+
+    if (!confirmar) return;
+
+    const { error } = await supabase.rpc(
+      "fn_cancelar_aula_dia",
+      {
+        p_owner_pin: ownerPin,
+        p_turma_id: t.id,
+        p_data: iso
+      }
+    );
+
+    if (error) {
+      return setErroCancel(friendlyError(error));
+    }
+
+    supabase.functions
+      .invoke("send-push", { body: { owner_pin: ownerPin } })
+      .catch(() => {});
+
+    setRefreshKey((k) => k + 1);
+    handleMonthChange(date);
+  };
+
+  const reativarAula = async (t) => {
+
+    setErroCancel("");
+
+    const { error } = await supabase.rpc(
+      "fn_reativar_aula_dia",
+      {
+        p_owner_pin: ownerPin,
+        p_turma_id: t.id,
+        p_data: iso
+      }
+    );
+
+    if (error) {
+      return setErroCancel(friendlyError(error));
+    }
+
+    setRefreshKey((k) => k + 1);
+  };
 
   const marker = (d) => {
 
@@ -965,6 +1043,12 @@ function OwnerCalendar({ ownerPin }) {
           {MESES[date.getMonth()]}
         </div>
 
+        {erroCancel && (
+          <div className="text-rose-400 text-sm bg-rose-500/10 border border-rose-500/30 rounded-xl p-3">
+            {erroCancel}
+          </div>
+        )}
+
         {templatesHoje.length === 0 && (
           <div className="text-zinc-500 text-sm bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             Não há turmas agendadas para{" "}
@@ -980,28 +1064,73 @@ function OwnerCalendar({ ownerPin }) {
           const cheio =
             inscritos.length >= t.capacidade;
 
+          const cancelada =
+            canceladas[t.id] === true;
+
+          const jaPassou =
+            classDateTime(iso, t.hora) <= lisbonNow();
+
           return (
             <div
               key={t.id}
-              className="bg-zinc-900 border border-zinc-800 rounded-xl p-4"
+              className={`bg-zinc-900 border rounded-xl p-4 ${
+                cancelada
+                  ? "border-rose-500/40"
+                  : "border-zinc-800"
+              }`}
             >
 
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2 gap-2">
 
-                <span className="font-mono-id text-[#72E580] text-lg">
+                <span
+                  className={`font-mono-id text-lg ${
+                    cancelada
+                      ? "text-zinc-500 line-through"
+                      : "text-[#72E580]"
+                  }`}
+                >
                   {hhmm(t.hora)}
                 </span>
 
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-md ${
-                    cheio
-                      ? "bg-rose-500/15 text-rose-400"
-                      : "bg-emerald-500/15 text-emerald-400"
-                  }`}
-                >
-                  {inscritos.length}/
-                  {t.capacidade} vagas ocupadas
-                </span>
+                <div className="flex items-center gap-3">
+
+                  {cancelada ? (
+                    <span className="text-xs font-medium px-2 py-1 rounded-md bg-rose-500/15 text-rose-400">
+                      Cancelada
+                    </span>
+                  ) : (
+                    <span
+                      className={`text-xs font-medium px-2 py-1 rounded-md ${
+                        cheio
+                          ? "bg-rose-500/15 text-rose-400"
+                          : "bg-emerald-500/15 text-emerald-400"
+                      }`}
+                    >
+                      {inscritos.length}/
+                      {t.capacidade} vagas ocupadas
+                    </span>
+                  )}
+
+                  {cancelada && !jaPassou && (
+                    <button
+                      onClick={() => reativarAula(t)}
+                      className="text-xs text-zinc-400 hover:text-[#72E580] underline"
+                    >
+                      Reativar
+                    </button>
+                  )}
+
+                  {!cancelada && !jaPassou && (
+                    <button
+                      onClick={() => cancelarAula(t)}
+                      title="Cancelar este treino neste dia"
+                      className="text-zinc-600 hover:text-rose-400"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+
+                </div>
 
               </div>
 
@@ -2524,6 +2653,10 @@ function AtletaDashboard({
   const [ocupacaoHoje, setOcupacaoHoje] =
     useState({});
 
+  // Turmas canceladas pelo Duarte no dia selecionado.
+  const [canceladasHoje, setCanceladasHoje] =
+    useState({});
+
   const [loadingDia, setLoadingDia] =
     useState(false);
 
@@ -2789,10 +2922,26 @@ function AtletaDashboard({
           templatesDoDia.length === 0
         ) {
           setOcupacaoHoje({});
+          setCanceladasHoje({});
           return;
         }
 
         setLoadingDia(true);
+
+        const { data: canc } =
+          await supabase.rpc(
+            "fn_listar_cancelamentos",
+            {
+              p_desde: dIso,
+              p_ate: dIso
+            }
+          );
+
+        const cmap = {};
+        (canc || []).forEach((c) => {
+          cmap[c.turma_id] = true;
+        });
+        setCanceladasHoje(cmap);
 
         const results =
           await Promise.all(
@@ -2859,17 +3008,39 @@ function AtletaDashboard({
             )
           );
 
-        const { data } =
-          await supabase.rpc(
-            "fn_disponibilidade_periodo",
-            {
-              p_desde: desde,
-              p_ate: ate
-            }
-          );
+        const [{ data }, { data: canc }] =
+          await Promise.all([
+            supabase.rpc(
+              "fn_disponibilidade_periodo",
+              {
+                p_desde: desde,
+                p_ate: ate
+              }
+            ),
+            supabase.rpc(
+              "fn_listar_cancelamentos",
+              {
+                p_desde: desde,
+                p_ate: ate
+              }
+            )
+          ]);
+
+        // Treinos cancelados não contam para os pontos
+        // verde/vermelho do calendário.
+        const cancSet = new Set(
+          (canc || []).map(
+            (c) => c.turma_id + "|" + c.data
+          )
+        );
 
         setDisponibilidadeMes(
-          data || []
+          (data || []).filter(
+            (r) =>
+              !cancSet.has(
+                r.turma_id + "|" + r.data
+              )
+          )
         );
       },
       []
@@ -3570,7 +3741,11 @@ function AtletaDashboard({
                         t.hora
                       ) <= lisbonNow();
 
+                    const cancelada =
+                      canceladasHoje[t.id] === true;
+
                     const bloqueadoPelaSemana =
+                      !cancelada &&
                       !minhaMarcacao &&
                       semanaSelecionadaCheia;
 
@@ -3578,7 +3753,7 @@ function AtletaDashboard({
                       <div
                         key={t.id}
                         className={`bg-zinc-900 border rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap ${
-                          cheio || bloqueadoPelaSemana
+                          cancelada || cheio || bloqueadoPelaSemana
                             ? "border-rose-500/40"
                             : "border-zinc-800"
                         }`}
@@ -3594,6 +3769,12 @@ function AtletaDashboard({
 
                             <span className="text-xs font-medium px-2 py-1 rounded-md bg-amber-500/15 text-amber-400">
                               Já passou
+                            </span>
+
+                          ) : cancelada ? (
+
+                            <span className="text-xs font-medium px-2 py-1 rounded-md bg-rose-500/15 text-rose-400">
+                              Treino cancelado
                             </span>
 
                           ) : minhaMarcacao ? null : (
@@ -3616,7 +3797,13 @@ function AtletaDashboard({
 
                         </div>
 
-                        {minhaMarcacao ? (
+                        {cancelada ? (
+
+                          <span className="px-4 py-2 rounded-md text-sm font-medium bg-zinc-800 text-zinc-600">
+                            Cancelado
+                          </span>
+
+                        ) : minhaMarcacao ? (
 
                           jaPassou ? (
 
