@@ -1249,7 +1249,7 @@ carregar();
         </div>
 
         <div className="text-xs text-zinc-500">
-          Cada turma dura 1 hora e tem 5 vagas por defeito.
+          Cada turma dura 1 hora e tem 4 vagas por defeito.
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
